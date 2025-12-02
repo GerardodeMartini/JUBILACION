@@ -1,7 +1,7 @@
 // Constants
 const RETIREMENT_AGE_FEMALE = 60;
 const RETIREMENT_AGE_MALE = 65;
-const API_URL = 'http://localhost:3001/api';
+const API_URL = '/api';
 
 // State
 let globalAgents = [];
