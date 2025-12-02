@@ -535,3 +535,9 @@ window.handleLogin = handleLogin;
 window.handleRegister = handleRegister;
 window.toggleAuthMode = toggleAuthMode;
 window.logout = logout;
+
+function toggleUploadSection() {
+    const uploadSection = document.getElementById('upload-section');
+    if (uploadSection) uploadSection.classList.toggle('hidden');
+}
+window.toggleUploadSection = toggleUploadSection;

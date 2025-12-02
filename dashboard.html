@@ -42,8 +42,8 @@
             </header>
 
             <main>
-                <!-- Upload Section -->
-                <section id="upload-section" class="card upload-card">
+                <!-- Upload Section (Hidden by default) -->
+                <section id="upload-section" class="card upload-card hidden">
                     <div class="upload-area" id="drop-zone">
                         <i class="ph ph-microsoft-excel-logo upload-icon"></i>
                         <h3>Cargar archivo Excel</h3>
@@ -69,7 +69,7 @@
                     </div>
                 </section>
 
-                <!-- Dashboard Section -->
+                <!-- Dashboard Section (Visible by default) -->
                 <section id="dashboard-section">
                     <div class="dashboard-header">
                         <div>
@@ -78,7 +78,7 @@
                                 <button class="btn-primary small" onclick="openModal()">
                                     <i class="ph ph-plus"></i> Agregar Agente
                                 </button>
-                                <button class="btn-secondary small" onclick="triggerDashboardUpload()">
+                                <button class="btn-secondary small" onclick="toggleUploadSection()">
                                     <i class="ph ph-microsoft-excel-logo"></i> Importar Excel
                                 </button>
                                 <input type="file" id="dashboard-file-input" accept=".xlsx, .xls" hidden

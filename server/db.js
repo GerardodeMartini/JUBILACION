@@ -4,14 +4,14 @@ import { open } from 'sqlite';
 let db;
 
 export async function initDB() {
-    if (db) return db;
+  if (db) return db;
 
-    db = await open({
-        filename: './database.sqlite',
-        driver: sqlite3.Database
-    });
+  db = await open({
+    filename: process.env.DB_PATH || './database.sqlite',
+    driver: sqlite3.Database
+  });
 
-    await db.exec(`
+  await db.exec(`
     CREATE TABLE IF NOT EXISTS users (
       id TEXT PRIMARY KEY,
       username TEXT UNIQUE,
@@ -33,11 +33,11 @@ export async function initDB() {
     );
   `);
 
-    console.log('Database initialized');
-    return db;
+  console.log('Database initialized');
+  return db;
 }
 
 export async function getDB() {
-    if (!db) await initDB();
-    return db;
+  if (!db) await initDB();
+  return db;
 }
