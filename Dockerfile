@@ -10,7 +10,7 @@ COPY server/package*.json ./server/
 
 # Instalar dependencias del root (si las hay) y del servidor
 RUN npm install
-cd server && npm install
+RUN cd server && npm install
 
 # Copiar el resto del código de la aplicación
 COPY . .
