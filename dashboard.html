@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Jubilaciones - Dashboard</title>
+
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <!-- SheetJS (xlsx) -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+
+    <link rel="stylesheet" href="styles.css">
+    <script type="module" src="script.js"></script>
+</head>
+
+<body>
+    <div class="app-container">
+
+        <!-- Main App -->
+        <div id="main-app">
+            <header class="app-header">
+                <div class="logo-container">
+                    <i class="ph ph-identification-card logo-icon"></i>
+                    <h1>Gestión de Jubilaciones</h1>
+                </div>
+                <div style="display: flex; justify-content: center; align-items: center; gap: 1rem; flex-wrap: wrap;">
+                    <p class="subtitle">Calculadora de fechas y alertas de retiro</p>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <span id="user-display" class="status-badge status-lejos"></span>
+                        <button class="btn-secondary small" onclick="logout()">Salir</button>
+                    </div>
+                </div>
+            </header>
+
+            <main>
+                <!-- Upload Section -->
+                <section id="upload-section" class="card upload-card">
+                    <div class="upload-area" id="drop-zone">
+                        <i class="ph ph-microsoft-excel-logo upload-icon"></i>
+                        <h3>Cargar archivo Excel</h3>
+                        <p>Arrastra tu archivo aquí o haz clic para buscar</p>
+                        <input type="file" id="file-input" accept=".xlsx, .xls" hidden>
+                        <button class="btn-primary" onclick="document.getElementById('file-input').click()">
+                            Seleccionar Archivo
+                        </button>
+
+                        <div
+                            style="margin-top: 2rem; display: flex; align-items: center; justify-content: center; gap: 1rem;">
+                            <span style="height: 1px; background: var(--border); width: 50px;"></span>
+                            <span style="font-size: 0.875rem; color: var(--text-muted);">O</span>
+                            <span style="height: 1px; background: var(--border); width: 50px;"></span>
+                        </div>
+
+                        <button class="btn-secondary" onclick="openModal()" style="margin-top: 1rem;">
+                            <i class="ph ph-plus"></i> Cargar Manualmente
+                        </button>
+                    </div>
+                    <div class="upload-info">
+                        <p><i class="ph ph-info"></i> Formato: Nombre, Apellido, Fecha Nacimiento, Genero</p>
+                    </div>
+                </section>
+
+                <!-- Dashboard Section -->
+                <section id="dashboard-section">
+                    <div class="dashboard-header">
+                        <div>
+                            <h2>Resultados del Análisis</h2>
+                            <div class="header-actions">
+                                <button class="btn-primary small" onclick="openModal()">
+                                    <i class="ph ph-plus"></i> Agregar Agente
+                                </button>
+                                <button class="btn-secondary small" onclick="triggerDashboardUpload()">
+                                    <i class="ph ph-microsoft-excel-logo"></i> Importar Excel
+                                </button>
+                                <input type="file" id="dashboard-file-input" accept=".xlsx, .xls" hidden
+                                    onchange="handleFileSelect(event)">
+                                <button class="btn-secondary small" onclick="clearAllData()">
+                                    <i class="ph ph-trash"></i> Borrar Todo
+                                </button>
+                            </div>
+                        </div>
+                        <div class="stats-container">
+                            <div class="stat-card" data-type="total">
+                                <span class="stat-label">Total Agentes</span>
+                                <span class="stat-value" id="total-count">0</span>
+                            </div>
+                            <div class="stat-card urgent" data-type="vencido">
+                                <span class="stat-label">Vencidos</span>
+                                <span class="stat-value" id="vencido-count">0</span>
+                            </div>
+                            <div class="stat-card warning" data-type="proximo">
+                                <span class="stat-label">Próximos (2 años)</span>
+                                <span class="stat-value" id="proximo-count">0</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Agente</th>
+                                    <th>Fecha Nacimiento</th>
+                                    <th>Edad</th>
+                                    <th>Género</th>
+                                    <th>Fecha Retiro</th>
+                                    <th>Estado</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="table-body">
+                                <!-- Rows will be added here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </main>
+
+            <!-- Modal for Adding Agent -->
+            <div id="add-agent-modal" class="modal hidden">
+                <div class="modal-content card">
+                    <div class="modal-header">
+                        <h3>Agregar Nuevo Agente</h3>
+                        <button class="btn-icon" onclick="closeModal()"><i class="ph ph-x"></i></button>
+                    </div>
+                    <form id="add-agent-form" onsubmit="handleManualAdd(event)">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="input-name">Nombre</label>
+                                <input type="text" id="input-name" required placeholder="Ej: Juan">
+                            </div>
+                            <div class="form-group">
+                                <label for="input-surname">Apellido</label>
+                                <input type="text" id="input-surname" required placeholder="Ej: Pérez">
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="input-gender">Género</label>
+                                <select id="input-gender" required>
+                                    <option value="M">Masculino</option>
+                                    <option value="F">Femenino</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="input-birthdate">Fecha de Nacimiento</label>
+                                <input type="date" id="input-birthdate" required>
+                            </div>
+                        </div>
+
+                        <div class="modal-actions">
+                            <button type="button" class="btn-secondary" onclick="closeModal()">Cancelar</button>
+                            <button type="submit" class="btn-primary">Guardar Agente</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>
