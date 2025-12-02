@@ -9,7 +9,6 @@ let currentUser = null;
 let token = localStorage.getItem('auth_token');
 
 // DOM Elements
-// DOM Elements
 let dropZone;
 let fileInput;
 let uploadSection;
@@ -22,17 +21,12 @@ let loginFormContainer;
 let registerFormContainer;
 let userDisplay;
 
-// Event Listeners
-// Event Listeners moved to DOMContentLoaded
-
-// Init
-// Init
 // Init
 window.addEventListener('DOMContentLoaded', () => {
     // Initialize DOM Elements
     dropZone = document.getElementById('drop-zone');
     fileInput = document.getElementById('file-input');
-    uploadSection = document.getElementById('upload-section');
+    uploadSection = document.getElementById('upload-section'); // Might be null now if removed from HTML
     dashboardSection = document.getElementById('dashboard-section');
     tableBody = document.getElementById('table-body');
     modal = document.getElementById('add-agent-modal');
@@ -42,9 +36,12 @@ window.addEventListener('DOMContentLoaded', () => {
     registerFormContainer = document.getElementById('register-form-container');
     userDisplay = document.getElementById('user-display');
 
-    // Event Listeners
     if (dropZone) {
-        dropZone.addEventListener('click', () => fileInput.click());
+        dropZone.addEventListener('click', (e) => {
+            if (e.target !== fileInput) {
+                fileInput.click();
+            }
+        });
         dropZone.addEventListener('dragover', (e) => {
             e.preventDefault();
             dropZone.classList.add('dragover');
@@ -59,6 +56,16 @@ window.addEventListener('DOMContentLoaded', () => {
         modal.addEventListener('click', (e) => {
             if (e.target === modal) {
                 closeModal();
+            }
+        });
+    }
+
+    // Upload Modal Listeners
+    const uploadModal = document.getElementById('upload-modal');
+    if (uploadModal) {
+        uploadModal.addEventListener('click', (e) => {
+            if (e.target === uploadModal) {
+                closeUploadModal();
             }
         });
     }
@@ -311,6 +318,7 @@ async function analyzeData(data) {
     }
 
     alert(`Se importaron ${successCount} agentes correctamente.`);
+    closeUploadModal();
     loadAgents();
 }
 
@@ -384,11 +392,30 @@ async function clearAllData() {
     }
 }
 
+function updateStats() {
+    const totalCount = document.getElementById('total-count');
+    const vencidoCount = document.getElementById('vencido-count');
+    const proximoCount = document.getElementById('proximo-count');
+
+    if (!totalCount || !vencidoCount || !proximoCount) return;
+
+    totalCount.textContent = globalAgents.length;
+
+    const vencidos = globalAgents.filter(a => a.status.code === 'vencido').length;
+    vencidoCount.textContent = vencidos;
+
+    const proximos = globalAgents.filter(a => a.status.code === 'proximo' || a.status.code === 'inminente').length;
+    proximoCount.textContent = proximos;
+}
+
 function renderDashboard() {
     const dashboardSection = document.getElementById('dashboard-section');
     const tableBody = document.getElementById('table-body');
 
     if (dashboardSection) dashboardSection.classList.remove('hidden');
+
+    updateStats();
+
     if (!tableBody) return;
     tableBody.innerHTML = '';
 
@@ -468,6 +495,16 @@ function closeModal() {
     if (form) form.reset();
 }
 
+function openUploadModal() {
+    const modal = document.getElementById('upload-modal');
+    if (modal) modal.classList.remove('hidden');
+}
+
+function closeUploadModal() {
+    const modal = document.getElementById('upload-modal');
+    if (modal) modal.classList.add('hidden');
+}
+
 async function handleManualAdd(e) {
     e.preventDefault();
 
@@ -529,15 +566,11 @@ window.triggerDashboardUpload = triggerDashboardUpload;
 window.clearAllData = clearAllData;
 window.openModal = openModal;
 window.closeModal = closeModal;
+window.openUploadModal = openUploadModal;
+window.closeUploadModal = closeUploadModal;
 window.handleManualAdd = handleManualAdd;
 window.deleteAgent = deleteAgent;
 window.handleLogin = handleLogin;
 window.handleRegister = handleRegister;
 window.toggleAuthMode = toggleAuthMode;
 window.logout = logout;
-
-function toggleUploadSection() {
-    const uploadSection = document.getElementById('upload-section');
-    if (uploadSection) uploadSection.classList.toggle('hidden');
-}
-window.toggleUploadSection = toggleUploadSection;

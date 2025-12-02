@@ -42,33 +42,6 @@
             </header>
 
             <main>
-                <!-- Upload Section (Hidden by default) -->
-                <section id="upload-section" class="card upload-card hidden">
-                    <div class="upload-area" id="drop-zone">
-                        <i class="ph ph-microsoft-excel-logo upload-icon"></i>
-                        <h3>Cargar archivo Excel</h3>
-                        <p>Arrastra tu archivo aquí o haz clic para buscar</p>
-                        <input type="file" id="file-input" accept=".xlsx, .xls" hidden>
-                        <button class="btn-primary" onclick="document.getElementById('file-input').click()">
-                            Seleccionar Archivo
-                        </button>
-
-                        <div
-                            style="margin-top: 2rem; display: flex; align-items: center; justify-content: center; gap: 1rem;">
-                            <span style="height: 1px; background: var(--border); width: 50px;"></span>
-                            <span style="font-size: 0.875rem; color: var(--text-muted);">O</span>
-                            <span style="height: 1px; background: var(--border); width: 50px;"></span>
-                        </div>
-
-                        <button class="btn-secondary" onclick="openModal()" style="margin-top: 1rem;">
-                            <i class="ph ph-plus"></i> Cargar Manualmente
-                        </button>
-                    </div>
-                    <div class="upload-info">
-                        <p><i class="ph ph-info"></i> Formato: Nombre, Apellido, Fecha Nacimiento, Genero</p>
-                    </div>
-                </section>
-
                 <!-- Dashboard Section (Visible by default) -->
                 <section id="dashboard-section">
                     <div class="dashboard-header">
@@ -78,11 +51,9 @@
                                 <button class="btn-primary small" onclick="openModal()">
                                     <i class="ph ph-plus"></i> Agregar Agente
                                 </button>
-                                <button class="btn-secondary small" onclick="toggleUploadSection()">
+                                <button class="btn-secondary small" onclick="openUploadModal()">
                                     <i class="ph ph-microsoft-excel-logo"></i> Importar Excel
                                 </button>
-                                <input type="file" id="dashboard-file-input" accept=".xlsx, .xls" hidden
-                                    onchange="handleFileSelect(event)">
                                 <button class="btn-secondary small" onclick="clearAllData()">
                                     <i class="ph ph-trash"></i> Borrar Todo
                                 </button>
@@ -163,6 +134,28 @@
                             <button type="submit" class="btn-primary">Guardar Agente</button>
                         </div>
                     </form>
+                </div>
+            </div>
+
+            <!-- Modal for Uploading Excel -->
+            <div id="upload-modal" class="modal hidden">
+                <div class="modal-content card" style="max-width: 600px;">
+                    <div class="modal-header">
+                        <h3>Importar Excel</h3>
+                        <button class="btn-icon" onclick="closeUploadModal()"><i class="ph ph-x"></i></button>
+                    </div>
+                    <div class="upload-area" id="drop-zone">
+                        <i class="ph ph-microsoft-excel-logo upload-icon"></i>
+                        <h3>Cargar archivo Excel</h3>
+                        <p>Arrastra tu archivo aquí o haz clic para buscar</p>
+                        <input type="file" id="file-input" accept=".xlsx, .xls" hidden>
+                        <button class="btn-primary">
+                            Seleccionar Archivo
+                        </button>
+                    </div>
+                    <div class="upload-info" style="margin-top: 1.5rem; text-align: center;">
+                        <p><i class="ph ph-info"></i> Formato: Nombre, Apellido, Fecha Nacimiento, Genero</p>
+                    </div>
                 </div>
             </div>
         </div>
