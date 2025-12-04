@@ -73,12 +73,13 @@ window.addEventListener('DOMContentLoaded', () => {
     // Page Logic
     const isDashboard = window.location.pathname.endsWith('dashboard.html');
     const isLogin = window.location.pathname.endsWith('index.html') || window.location.pathname === '/' || window.location.pathname.endsWith('/');
+    const isRegister = window.location.pathname.endsWith('register.html');
 
     if (token) {
         const savedUser = localStorage.getItem('auth_user');
         if (savedUser) currentUser = JSON.parse(savedUser);
 
-        if (isLogin) {
+        if (isLogin || isRegister) {
             window.location.href = 'dashboard.html';
             return;
         }
@@ -100,10 +101,8 @@ window.addEventListener('DOMContentLoaded', () => {
 // --- Auth Functions ---
 
 function toggleAuthMode() {
-    const loginFormContainer = document.getElementById('login-form-container');
-    const registerFormContainer = document.getElementById('register-form-container');
-    if (loginFormContainer) loginFormContainer.classList.toggle('hidden');
-    if (registerFormContainer) registerFormContainer.classList.toggle('hidden');
+    // Deprecated: Pages are now separate
+    console.warn('toggleAuthMode is deprecated');
 }
 
 async function handleLogin(e) {
@@ -149,7 +148,7 @@ async function handleRegister(e) {
 
         if (res.ok) {
             alert('Usuario creado con éxito. Por favor inicia sesión.');
-            toggleAuthMode();
+            window.location.href = 'index.html';
         } else {
             const data = await res.json();
             alert(`Error: ${data.error}`);
