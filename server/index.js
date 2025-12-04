@@ -26,6 +26,10 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '../')));
 
+app.get('/health', (req, res) => {
+    res.status(200).send('OK');
+});
+
 // Middleware de autenticación
 const authenticateToken = (req, res, next) => {
     const authHeader = req.headers['authorization'];
@@ -209,5 +213,11 @@ app.delete('/api/agents/:id', authenticateToken, async (req, res) => {
 initDB().then(() => {
     app.listen(PORT, () => {
         console.log(`Server running on http://localhost:${PORT}`);
+    });
+}).catch(err => {
+    console.error('Failed to initialize database:', err);
+    // Start server anyway to serve health check
+    app.listen(PORT, () => {
+        console.log(`Server running (without DB) on http://localhost:${PORT}`);
     });
 });
