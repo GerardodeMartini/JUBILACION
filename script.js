@@ -182,6 +182,31 @@ function sortAgents() {
     });
 }
 
+function calculateRetirementDate(birthDate, gender) {
+    const retirementAge = (gender === 'F' || gender === 'FEMENINO') ? RETIREMENT_AGE_FEMALE : RETIREMENT_AGE_MALE;
+    const date = new Date(birthDate);
+    date.setFullYear(date.getFullYear() + retirementAge);
+    return date;
+}
+
+function calculateAge(birthDate) {
+    const diff = Date.now() - birthDate.getTime();
+    const ageDate = new Date(diff);
+    return Math.abs(ageDate.getUTCFullYear() - 1970);
+}
+
+function getRetirementStatus(retirementDate) {
+    const now = new Date();
+    const diffTime = retirementDate - now;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const diffYears = diffDays / 365;
+
+    if (diffDays < 0) return { code: 'vencido', label: 'VENCIDO' };
+    if (diffDays < 180) return { code: 'inminente', label: 'INMINENTE (< 6 meses)' };
+    if (diffYears < 2) return { code: 'proximo', label: 'PRÓXIMO (< 2 años)' };
+    return { code: 'lejos', label: 'LEJOS' };
+}
+
 // --- File Handling ---
 
 function triggerDashboardUpload() {
@@ -232,7 +257,7 @@ async function analyzeData(data) {
         return null;
     };
 
-    let successCount = 0;
+    let agentsToUpload = [];
 
     for (const row of data) {
         let name = getValue(row, ['Nombre', 'Nombres', 'Name']) || '';
@@ -300,62 +325,47 @@ async function analyzeData(data) {
             age = calculateAge(birthDate);
         }
 
+        agentsToUpload.push({
+            fullName,
+            birthDate: birthDate ? birthDate.toISOString() : null,
+            gender,
+            retirementDate: retirementDate ? retirementDate.toISOString() : null,
+            status,
+            age,
+            agreement,
+            law,
+            affiliateStatus,
+            ministry
+        });
+    }
+
+    if (agentsToUpload.length > 0) {
         try {
-            await fetch(`${API_URL}/agents`, {
+            const res = await fetch(`${API_URL}/agents/bulk`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 },
-                body: JSON.stringify({
-                    fullName,
-                    birthDate: birthDate ? birthDate.toISOString() : null,
-                    gender,
-                    retirementDate: retirementDate ? retirementDate.toISOString() : null,
-                    status,
-                    age,
-                    agreement,
-                    law,
-                    affiliateStatus,
-                    ministry
-                })
+                body: JSON.stringify(agentsToUpload)
             });
-            successCount++;
-        } catch (e) {
-            console.error('Error uploading agent', e);
+
+            if (res.ok) {
+                const data = await res.json();
+                alert(`Éxito: ${data.message}`);
+                closeUploadModal();
+                loadAgents();
+            } else {
+                const errorData = await res.json();
+                alert(`Error al importar: ${errorData.error}`);
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Error de conexión al importar');
         }
+    } else {
+        alert('No se encontraron agentes válidos para importar.');
     }
-
-    alert(`Se importaron ${successCount} agentes correctamente.`);
-    closeUploadModal();
-    loadAgents();
-}
-
-// --- Logic ---
-
-function calculateRetirementDate(birthDate, gender) {
-    const retirementAge = (gender === 'F' || gender === 'FEMENINO') ? RETIREMENT_AGE_FEMALE : RETIREMENT_AGE_MALE;
-    const date = new Date(birthDate);
-    date.setFullYear(date.getFullYear() + retirementAge);
-    return date;
-}
-
-function calculateAge(birthDate) {
-    const diff = Date.now() - birthDate.getTime();
-    const ageDate = new Date(diff);
-    return Math.abs(ageDate.getUTCFullYear() - 1970);
-}
-
-function getRetirementStatus(retirementDate) {
-    const now = new Date();
-    const diffTime = retirementDate - now;
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    const diffYears = diffDays / 365;
-
-    if (diffDays < 0) return { code: 'vencido', label: 'VENCIDO' };
-    if (diffDays < 180) return { code: 'inminente', label: 'INMINENTE (< 6 meses)' };
-    if (diffYears < 2) return { code: 'proximo', label: 'PRÓXIMO (< 2 años)' };
-    return { code: 'lejos', label: 'LEJOS' };
 }
 
 // --- Persistence (API) ---
@@ -611,3 +621,4 @@ window.handleLogin = handleLogin;
 window.handleRegister = handleRegister;
 window.toggleAuthMode = toggleAuthMode;
 window.logout = logout;
+window.analyzeData = analyzeData;

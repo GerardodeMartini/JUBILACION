@@ -14,7 +14,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const PORT = 3001;
+const PORT = process.env.PORT || 3001;
 const SECRET_KEY = process.env.SECRET_KEY;
 
 if (!SECRET_KEY) {
@@ -102,6 +102,59 @@ app.get('/api/agents', authenticateToken, async (req, res) => {
     } catch (e) {
         console.error('Error getting agents:', e);
         res.status(500).json({ error: 'Error al obtener agentes' });
+    }
+});
+
+
+
+app.post('/api/agents/bulk', authenticateToken, async (req, res) => {
+    const agents = req.body; // Expecting an array of agents
+    if (!Array.isArray(agents)) return res.status(400).json({ error: 'Se esperaba un array de agentes' });
+
+    console.log(`POST /agents/bulk user=${req.user.id} count=${agents.length}`);
+
+    try {
+        const db = await getDB();
+
+        await db.run('BEGIN TRANSACTION');
+
+        const stmt = await db.prepare(`
+            INSERT INTO agents (id, user_id, full_name, birth_date, gender, retirement_date, status, agreement, law, affiliate_status, ministry)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `);
+
+        for (const agent of agents) {
+            const { fullName, birthDate, gender, retirementDate, status, agreement, law, affiliateStatus, ministry } = agent;
+            const id = crypto.randomUUID();
+            await stmt.run([
+                id,
+                req.user.id,
+                fullName,
+                birthDate,
+                gender,
+                retirementDate,
+                JSON.stringify(status),
+                agreement,
+                law,
+                affiliateStatus,
+                ministry
+            ]);
+        }
+
+        await stmt.finalize();
+        await db.run('COMMIT');
+
+        console.log(`Bulk insert completed: ${agents.length} agents`);
+        res.status(201).json({ message: `${agents.length} agentes creados` });
+    } catch (e) {
+        console.error('Error in bulk insert:', e);
+        try {
+            const db = await getDB();
+            await db.run('ROLLBACK');
+        } catch (rollbackErr) {
+            console.error('Error rolling back:', rollbackErr);
+        }
+        res.status(500).json({ error: 'Error al crear agentes masivamente' });
     }
 });
 
