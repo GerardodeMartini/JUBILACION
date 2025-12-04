@@ -255,6 +255,12 @@ async function analyzeData(data) {
         let birthDateRaw = getValue(row, ['Fecha Nacimiento', 'Fecha de Nacimiento', 'F. Nac', 'Nacimiento', 'Birth Date']);
         let ageRaw = getValue(row, ['Edad', 'Age', 'Años']);
 
+        // New fields
+        const agreement = getValue(row, ['Convenio', 'Agreement']) || '';
+        const law = getValue(row, ['Ley', 'Law']) || '';
+        const affiliateStatus = getValue(row, ['Afiliado', 'Affiliate', 'Estado Afiliado']) || '';
+        const ministry = getValue(row, ['Ministerio', 'Ministry', 'Repartición']) || '';
+
         let birthDate = null;
 
         if (birthDateRaw) {
@@ -307,7 +313,11 @@ async function analyzeData(data) {
                     gender,
                     retirementDate: retirementDate ? retirementDate.toISOString() : null,
                     status,
-                    age
+                    age,
+                    agreement,
+                    law,
+                    affiliateStatus,
+                    ministry
                 })
             });
             successCount++;
@@ -364,7 +374,11 @@ async function loadAgents() {
                 gender: a.gender,
                 retirementDate: a.retirement_date,
                 status: typeof a.status === 'string' ? JSON.parse(a.status) : a.status,
-                age: a.birth_date ? calculateAge(new Date(a.birth_date)) : null
+                age: a.birth_date ? calculateAge(new Date(a.birth_date)) : null,
+                agreement: a.agreement,
+                law: a.law,
+                affiliateStatus: a.affiliate_status,
+                ministry: a.ministry
             }));
             sortAgents();
 
@@ -441,7 +455,9 @@ function renderDashboard() {
 
         row.innerHTML = `
             <td>
-                <div style="font-weight: 500;">${agent.fullName}</div>
+                <div style="font-weight: 500; cursor: pointer; color: var(--primary);" onclick="openDetailsModal('${agent.id}')">
+                    ${agent.fullName}
+                </div>
             </td>
             <td>${birthDateStr}</td>
             <td>${agent.age !== null ? agent.age + ' años' : '-'}</td>
@@ -501,6 +517,25 @@ function openUploadModal() {
 
 function closeUploadModal() {
     const modal = document.getElementById('upload-modal');
+    if (modal) modal.classList.add('hidden');
+}
+
+function openDetailsModal(id) {
+    const agent = globalAgents.find(a => a.id === id);
+    if (!agent) return;
+
+    document.getElementById('detail-fullname').textContent = agent.fullName;
+    document.getElementById('detail-agreement').textContent = agent.agreement || '-';
+    document.getElementById('detail-law').textContent = agent.law || '-';
+    document.getElementById('detail-affiliate').textContent = agent.affiliateStatus || '-';
+    document.getElementById('detail-ministry').textContent = agent.ministry || '-';
+
+    const modal = document.getElementById('agent-details-modal');
+    if (modal) modal.classList.remove('hidden');
+}
+
+function closeDetailsModal() {
+    const modal = document.getElementById('agent-details-modal');
     if (modal) modal.classList.add('hidden');
 }
 
@@ -566,7 +601,10 @@ window.clearAllData = clearAllData;
 window.openModal = openModal;
 window.closeModal = closeModal;
 window.openUploadModal = openUploadModal;
+window.openUploadModal = openUploadModal;
 window.closeUploadModal = closeUploadModal;
+window.openDetailsModal = openDetailsModal;
+window.closeDetailsModal = closeDetailsModal;
 window.handleManualAdd = handleManualAdd;
 window.deleteAgent = deleteAgent;
 window.handleLogin = handleLogin;

@@ -50,23 +50,7 @@
                             <div class="header-actions">
                                 <button class="btn-primary small" onclick="openModal()">
                                     <i class="ph ph-plus"></i> Agregar Agente
-                                </button>
-                                <button class="btn-secondary small" onclick="openUploadModal()">
-                                    <i class="ph ph-microsoft-excel-logo"></i> Importar Excel
-                                </button>
-                                <button class="btn-secondary small" onclick="clearAllData()">
-                                    <i class="ph ph-trash"></i> Borrar Todo
-                                </button>
-                            </div>
-                        </div>
-                        <div class="stats-container">
-                            <div class="stat-card" data-type="total">
-                                <span class="stat-label">Total Agentes</span>
-                                <span class="stat-value" id="total-count">0</span>
-                            </div>
-                            <div class="stat-card urgent" data-type="vencido">
-                                <span class="stat-label">Vencidos</span>
-                                <span class="stat-value" id="vencido-count">0</span>
+                                    <span class="stat-value" id="vencido-count">0</span>
                             </div>
                             <div class="stat-card warning" data-type="proximo">
                                 <span class="stat-label">Próximos (2 años)</span>
@@ -155,6 +139,41 @@
                     </div>
                     <div class="upload-info" style="margin-top: 1.5rem; text-align: center;">
                         <p><i class="ph ph-info"></i> Formato: Nombre, Apellido, Fecha Nacimiento, Genero</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal for Agent Details -->
+            <div id="agent-details-modal" class="modal hidden">
+                <div class="modal-content card" style="max-width: 500px;">
+                    <div class="modal-header">
+                        <h3>Detalles del Agente</h3>
+                        <button class="btn-icon" onclick="closeDetailsModal()"><i class="ph ph-x"></i></button>
+                    </div>
+                    <div class="details-content">
+                        <div class="detail-item">
+                            <span class="detail-label">Nombre Completo</span>
+                            <span class="detail-value" id="detail-fullname">-</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Convenio</span>
+                            <span class="detail-value" id="detail-agreement">-</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Ley</span>
+                            <span class="detail-value" id="detail-law">-</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Afiliado</span>
+                            <span class="detail-value" id="detail-affiliate">-</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Ministerio</span>
+                            <span class="detail-value" id="detail-ministry">-</span>
+                        </div>
+                    </div>
+                    <div class="modal-actions" style="margin-top: 1.5rem;">
+                        <button class="btn-secondary" onclick="closeDetailsModal()">Cerrar</button>
                     </div>
                 </div>
             </div>

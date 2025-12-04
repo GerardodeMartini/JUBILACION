@@ -28,10 +28,33 @@ export async function initDB() {
       gender TEXT,
       retirement_date TEXT,
       status TEXT,
+      agreement TEXT,
+      law TEXT,
+      affiliate_status TEXT,
+      ministry TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY(user_id) REFERENCES users(id)
     );
   `);
+
+  // Migrations for existing databases
+  const columnsToAdd = [
+    { name: 'agreement', type: 'TEXT' },
+    { name: 'law', type: 'TEXT' },
+    { name: 'affiliate_status', type: 'TEXT' },
+    { name: 'ministry', type: 'TEXT' }
+  ];
+
+  for (const col of columnsToAdd) {
+    try {
+      await db.exec(`ALTER TABLE agents ADD COLUMN ${col.name} ${col.type}`);
+    } catch (e) {
+      // Ignore error if column already exists
+      if (!e.message.includes('duplicate column name')) {
+        console.error(`Error adding column ${col.name}:`, e);
+      }
+    }
+  }
 
   console.log('Database initialized');
   return db;

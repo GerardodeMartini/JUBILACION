@@ -106,7 +106,7 @@ app.get('/api/agents', authenticateToken, async (req, res) => {
 });
 
 app.post('/api/agents', authenticateToken, async (req, res) => {
-    const { fullName, birthDate, gender, retirementDate, status, age } = req.body;
+    const { fullName, birthDate, gender, retirementDate, status, age, agreement, law, affiliateStatus, ministry } = req.body;
     console.log(`POST /agents user=${req.user.id} body=`, req.body);
 
     try {
@@ -114,9 +114,9 @@ app.post('/api/agents', authenticateToken, async (req, res) => {
         const id = crypto.randomUUID();
 
         await db.run(
-            `INSERT INTO agents (id, user_id, full_name, birth_date, gender, retirement_date, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-            [id, req.user.id, fullName, birthDate, gender, retirementDate, JSON.stringify(status)]
+            `INSERT INTO agents (id, user_id, full_name, birth_date, gender, retirement_date, status, agreement, law, affiliate_status, ministry)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [id, req.user.id, fullName, birthDate, gender, retirementDate, JSON.stringify(status), agreement, law, affiliateStatus, ministry]
         );
 
         console.log('Agent created:', id);
