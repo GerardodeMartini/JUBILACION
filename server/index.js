@@ -211,8 +211,10 @@ app.delete('/api/agents/:id', authenticateToken, async (req, res) => {
 
 // Start Server
 // Start Server immediately to satisfy deployment health checks
-const server = app.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+// Start Server immediately to satisfy deployment health checks
+const server = app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Server running on port ${PORT}`);
+    console.log(`Listening on 0.0.0.0 (All interfaces)`);
     console.log(`Environment: ${process.env.NODE_ENV}`);
 });
 
