@@ -4,5 +4,8 @@ nixPkgs = ["python3", "gcc"]
 [phases.install]
 cmds = ["python -m venv /opt/venv && . /opt/venv/bin/activate && pip install -r requirements.txt"]
 
+[phases.build]
+cmds = [". /opt/venv/bin/activate && python backend/manage.py collectstatic --noinput"]
+
 [start]
-cmd = ". /opt/venv/bin/activate && gunicorn --chdir backend jubilacion_backend.wsgi --log-file -"
+cmd = ". /opt/venv/bin/activate && python backend/manage.py migrate && gunicorn --chdir backend jubilacion_backend.wsgi --log-file -"
