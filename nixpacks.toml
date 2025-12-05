@@ -1,8 +1,8 @@
 [phases.setup]
-nixPkgs = ["python3", "gcc"]
+nixPkgs = ["python311", "gcc"]
 
 [phases.install]
-cmds = ["python -m venv /opt/venv && . /opt/venv/bin/activate && pip install -r requirements.txt"]
+cmds = ["python3.11 -m venv /opt/venv && . /opt/venv/bin/activate && pip install -r requirements.txt"]
 
 [phases.build]
 cmds = [". /opt/venv/bin/activate && python backend/manage.py collectstatic --noinput"]
