@@ -372,7 +372,7 @@ async function analyzeData(data) {
 
 async function loadAgents() {
     try {
-        const res = await fetch(`${API_URL}/agents`, {
+        const res = await fetch(`${API_URL}/agents/`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         if (res.ok) {
@@ -576,7 +576,7 @@ async function handleManualAdd(e) {
     }
 
     try {
-        const res = await fetch(`${API_URL}/agents`, {
+        const res = await fetch(`${API_URL}/agents/`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
