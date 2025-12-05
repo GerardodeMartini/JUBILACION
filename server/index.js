@@ -210,14 +210,15 @@ app.delete('/api/agents/:id', authenticateToken, async (req, res) => {
 });
 
 // Start Server
+// Start Server immediately to satisfy deployment health checks
+const server = app.listen(PORT, () => {
+    console.log(`Server running on http://localhost:${PORT}`);
+    console.log(`Environment: ${process.env.NODE_ENV}`);
+});
+
+// Initialize DB in background
 initDB().then(() => {
-    app.listen(PORT, () => {
-        console.log(`Server running on http://localhost:${PORT}`);
-    });
+    console.log('Database initialized successfully');
 }).catch(err => {
     console.error('Failed to initialize database:', err);
-    // Start server anyway to serve health check
-    app.listen(PORT, () => {
-        console.log(`Server running (without DB) on http://localhost:${PORT}`);
-    });
 });
