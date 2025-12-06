@@ -8,4 +8,4 @@ cmds = ["python3.11 -m venv /opt/venv && . /opt/venv/bin/activate && pip install
 cmds = [". /opt/venv/bin/activate && python backend/manage.py collectstatic --noinput"]
 
 [start]
-cmd = ". /opt/venv/bin/activate && python backend/manage.py migrate && gunicorn --chdir backend jubilacion_backend.wsgi --log-file -"
+cmd = ". /opt/venv/bin/activate && chmod +x startup.sh && ./startup.sh"
