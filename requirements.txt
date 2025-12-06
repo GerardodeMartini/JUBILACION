@@ -1,6 +1,5 @@
-django
-djangorestframework
-django-cors-headers
-djangorestframework-simplejwt
-gunicorn
-whitenoise
+asgiref==3.11.0
+Django==6.0
+psycopg2-binary==2.9.11
+sqlparse==0.5.4
+tzdata==2025.2
