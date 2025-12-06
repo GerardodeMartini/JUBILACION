@@ -327,9 +327,9 @@ async function analyzeData(data) {
 
         agentsToUpload.push({
             fullName,
-            birthDate: birthDate ? birthDate.toISOString() : null,
+            birthDate: birthDate ? birthDate.toISOString().split('T')[0] : null,
             gender,
-            retirementDate: retirementDate ? retirementDate.toISOString() : null,
+            retirementDate: retirementDate ? retirementDate.toISOString().split('T')[0] : null,
             status,
             age,
             agreement,
