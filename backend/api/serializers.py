@@ -15,3 +15,4 @@ class AgentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Agent
         fields = '__all__'
+        read_only_fields = ['user']

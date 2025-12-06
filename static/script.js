@@ -491,7 +491,7 @@ function renderDashboard() {
 async function deleteAgent(id, reload = true) {
     if (!reload || confirm('¿Borrar este agente?')) {
         try {
-            const res = await fetch(`${API_URL}/agents/${id}`, {
+            const res = await fetch(`${API_URL}/agents/${id}/`, {
                 method: 'DELETE',
                 headers: { 'Authorization': `Bearer ${token}` }
             });
@@ -596,7 +596,9 @@ async function handleManualAdd(e) {
             loadAgents();
             closeModal();
         } else {
-            alert('Error al guardar agente');
+            const data = await res.json();
+            console.error('Error creating agent:', data);
+            alert(`Error al guardar agente: ${JSON.stringify(data)}`);
         }
     } catch (e) {
         console.error(e);

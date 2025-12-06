@@ -97,20 +97,25 @@ class AgentViewSet(viewsets.ModelViewSet):
     # Actually, for single create, I can just override create method in ViewSet.
     
     def create(self, request, *args, **kwargs):
-        # Manual mapping for single create to support existing frontend
-        data = request.data.copy()
-        mapping = {
-            'fullName': 'full_name',
-            'birthDate': 'birth_date',
-            'retirementDate': 'retirement_date',
-            'affiliateStatus': 'affiliate_status'
-        }
-        for camel, snake in mapping.items():
-            if camel in data:
-                data[snake] = data.pop(camel)
-        
-        serializer = self.get_serializer(data=data)
-        serializer.is_valid(raise_exception=True)
-        self.perform_create(serializer)
-        headers = self.get_success_headers(serializer.data)
-        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+        try:
+            # Manual mapping for single create to support existing frontend
+            data = request.data.copy()
+            mapping = {
+                'fullName': 'full_name',
+                'birthDate': 'birth_date',
+                'retirementDate': 'retirement_date',
+                'affiliateStatus': 'affiliate_status'
+            }
+            for camel, snake in mapping.items():
+                if camel in data:
+                    data[snake] = data.pop(camel)
+            
+            serializer = self.get_serializer(data=data)
+            serializer.is_valid(raise_exception=True)
+            self.perform_create(serializer)
+            headers = self.get_success_headers(serializer.data)
+            return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
