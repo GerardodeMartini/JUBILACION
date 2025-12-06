@@ -341,7 +341,7 @@ async function analyzeData(data) {
 
     if (agentsToUpload.length > 0) {
         try {
-            const res = await fetch(`${API_URL}/agents/bulk`, {
+            const res = await fetch(`${API_URL}/agents/bulk/`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
