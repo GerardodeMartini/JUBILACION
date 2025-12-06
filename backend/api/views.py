@@ -84,6 +84,8 @@ class AgentViewSet(viewsets.ModelViewSet):
                     created_agents.append(serializer.data)
             return Response({'message': f'{len(created_agents)} agentes creados'}, status=status.HTTP_201_CREATED)
         except Exception as e:
+            import traceback
+            traceback.print_exc()
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     # Override create to handle camelCase from frontend for single create too?
