@@ -24,6 +24,10 @@ class Agent(models.Model):
     law = models.CharField(max_length=255, blank=True, null=True)
     affiliate_status = models.CharField(max_length=255, blank=True, null=True)
     ministry = models.CharField(max_length=255, blank=True, null=True)
+    location = models.CharField(max_length=255, blank=True, null=True) # Ubicacion
+    branch = models.CharField(max_length=255, blank=True, null=True)   # Rama
+    cuil = models.CharField(max_length=50, blank=True, null=True)      # CUIL
+    seniority = models.CharField(max_length=50, blank=True, null=True) # Antiguedad
     created_at = models.DateTimeField(auto_now_add=True)
 
     def save(self, *args, **kwargs):

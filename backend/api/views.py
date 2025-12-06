@@ -76,6 +76,10 @@ class AgentViewSet(viewsets.ModelViewSet):
                         'law': agent_data.get('law'),
                         'affiliate_status': agent_data.get('affiliateStatus'),
                         'ministry': agent_data.get('ministry'),
+                        'location': agent_data.get('location'),
+                        'branch': agent_data.get('branch'),
+                        'cuil': agent_data.get('cuil'),
+                        'seniority': agent_data.get('seniority'),
                         'user': request.user.id
                     }
                     serializer = self.get_serializer(data=data)
@@ -104,7 +108,11 @@ class AgentViewSet(viewsets.ModelViewSet):
                 'fullName': 'full_name',
                 'birthDate': 'birth_date',
                 'retirementDate': 'retirement_date',
-                'affiliateStatus': 'affiliate_status'
+                'affiliateStatus': 'affiliate_status',
+                'location': 'location',
+                'branch': 'branch',
+                'cuil': 'cuil',
+                'seniority': 'seniority'
             }
             for camel, snake in mapping.items():
                 if camel in data:

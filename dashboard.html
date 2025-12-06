@@ -19,7 +19,148 @@
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 
     <link rel="stylesheet" href="/static/styles.css">
-    <script type="module" src="/static/script.js"></script>
+    <script type="module" src="/static/script.js?v=2"></script>
+
+    <style>
+        /* Chatbot Styles */
+        .chatbot-widget {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            z-index: 1000;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .chatbot-toggle {
+            width: 3.5rem;
+            height: 3.5rem;
+            border-radius: 50%;
+            background: var(--primary);
+            color: white;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            transition: transform 0.2s, background 0.2s;
+        }
+
+        .chatbot-toggle:hover {
+            transform: scale(1.05);
+            background: var(--primary-dark);
+        }
+
+        .chatbot-window {
+            position: absolute;
+            bottom: 5rem;
+            right: 0;
+            width: 320px;
+            height: 450px;
+            background: white;
+            border-radius: 1rem;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            transform-origin: bottom right;
+        }
+
+        .chatbot-window.hidden {
+            opacity: 0;
+            transform: scale(0.9);
+            pointer-events: none;
+            display: flex !important;
+            /* Keep layout but hide visually */
+            visibility: hidden;
+        }
+
+        .chatbot-header {
+            background: var(--primary);
+            color: white;
+            padding: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .chatbot-header h3 {
+            margin: 0;
+            font-size: 1rem;
+            font-weight: 600;
+        }
+
+        .chatbot-header button {
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            font-size: 1.25rem;
+        }
+
+        .chatbot-messages {
+            flex: 1;
+            padding: 1rem;
+            overflow-y: auto;
+            background: #f8fafc;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .message {
+            max-width: 80%;
+            padding: 0.75rem;
+            border-radius: 0.75rem;
+            font-size: 0.875rem;
+            line-height: 1.4;
+        }
+
+        .message.bot {
+            background: white;
+            align-self: flex-start;
+            border-bottom-left-radius: 0.25rem;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        }
+
+        .message.user {
+            background: var(--primary);
+            color: white;
+            align-self: flex-end;
+            border-bottom-right-radius: 0.25rem;
+        }
+
+        .chatbot-input {
+            padding: 1rem;
+            background: white;
+            border-top: 1px solid #e2e8f0;
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .chatbot-input input {
+            flex: 1;
+            padding: 0.5rem;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.5rem;
+            outline: none;
+        }
+
+        .chatbot-input button {
+            background: var(--primary);
+            color: white;
+            border: none;
+            width: 2.5rem;
+            height: 2.5rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+    </style>
 </head>
 
 <body>
@@ -83,6 +224,7 @@
                                     <th>Fecha Nacimiento</th>
                                     <th>Edad</th>
                                     <th>Género</th>
+                                    <th>Antigüedad</th>
                                     <th>Fecha Retiro</th>
                                     <th>Estado</th>
                                     <th>Acciones</th>
@@ -166,32 +308,74 @@
                         <h3>Detalles del Agente</h3>
                         <button class="btn-icon" onclick="closeDetailsModal()"><i class="ph ph-x"></i></button>
                     </div>
-                    <div class="details-content">
-                        <div class="detail-item">
-                            <span class="detail-label">Nombre Completo</span>
+                    <div class="details-content" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <div class="detail-item" style="grid-column: span 2;">
+                            <span class="detail-label">Nombre Completo:</span>
                             <span class="detail-value" id="detail-fullname">-</span>
                         </div>
                         <div class="detail-item">
-                            <span class="detail-label">Convenio</span>
-                            <span class="detail-value" id="detail-agreement">-</span>
+                            <span class="detail-label">CUIL:</span>
+                            <span class="detail-value" id="detail-cuil">-</span>
                         </div>
                         <div class="detail-item">
-                            <span class="detail-label">Ley</span>
-                            <span class="detail-value" id="detail-law">-</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Afiliado</span>
+                            <span class="detail-label">Afiliado:</span>
                             <span class="detail-value" id="detail-affiliate">-</span>
                         </div>
                         <div class="detail-item">
-                            <span class="detail-label">Ministerio</span>
+                            <span class="detail-label">Convenio:</span>
+                            <span class="detail-value" id="detail-agreement">-</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Ley:</span>
+                            <span class="detail-value" id="detail-law">-</span>
+                        </div>
+                        <div class="detail-item" style="grid-column: span 2;">
+                            <span class="detail-label">Jurisdicción:</span>
                             <span class="detail-value" id="detail-ministry">-</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Ubicación:</span>
+                            <span class="detail-value" id="detail-location">-</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Rama:</span>
+                            <span class="detail-value" id="detail-branch">-</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Años de Antigüedad:</span>
+                            <span class="detail-value" id="detail-seniority">-</span>
                         </div>
                     </div>
                     <div class="modal-actions" style="margin-top: 1.5rem;">
                         <button class="btn-secondary" onclick="closeDetailsModal()">Cerrar</button>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chatbot Widget -->
+    <div id="chatbot-widget" class="chatbot-widget">
+        <button id="chatbot-toggle" class="chatbot-toggle" onclick="toggleChatbot()">
+            <i class="ph ph-chat-circle-dots"></i>
+        </button>
+        <div id="chatbot-window" class="chatbot-window hidden">
+            <div class="chatbot-header">
+                <h3>Asistente Virtual</h3>
+                <button onclick="toggleChatbot()"><i class="ph ph-x"></i></button>
+            </div>
+            <div id="chatbot-messages" class="chatbot-messages">
+                <div class="message bot">
+                    Hola, soy tu asistente. Podés pedirme cosas como:
+                    <br>• "Filtrar por Hacienda"
+                    <br>• "Buscar a Lopez"
+                    <br>• "¿Cuántos se jubilan pronto?"
+                </div>
+            </div>
+            <div class="chatbot-input">
+                <input type="text" id="chat-input" placeholder="Escribí tu consulta..."
+                    onkeypress="handleChatInput(event)">
+                <button onclick="sendMessage()"><i class="ph ph-paper-plane-right"></i></button>
             </div>
         </div>
     </div>

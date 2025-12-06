@@ -282,9 +282,44 @@ async function analyzeData(data) {
 
         // New fields
         const agreement = getValue(row, ['Convenio', 'Agreement']) || '';
-        const law = getValue(row, ['Ley', 'Law']) || '';
+        const law = getValue(row, ['Unnamed: 3', 'E1', 'Ley', 'Law']) || '';
         const affiliateStatus = getValue(row, ['Afiliado', 'Affiliate', 'Estado Afiliado']) || '';
-        const ministry = getValue(row, ['Ministerio', 'Ministry', 'Repartición']) || '';
+
+        // Jurisdiction parsing (L1 : Unnamed: 11)
+        const jurisCode = getValue(row, ['L1', 'Jurisdiccion', 'Jurisdicción']) || '';
+        const jurisDesc = getValue(row, ['Unnamed: 11', 'Jurisdiccion Descripcion']) || '';
+
+        // Fallback to old 'Ministerio' if L1 is missing, otherwise format as requested
+        let ministry = getValue(row, ['Ministerio', 'Ministry', 'Repartición']) || '';
+        if (jurisCode || jurisDesc) {
+            ministry = `${jurisCode} - ${jurisDesc}`.trim();
+            if (ministry === '-') ministry = ''; // Clean up if both empty
+        }
+
+        // --- New Fields Parsing ---
+
+        // Ubicacion: User indicated 'Unnamed: 15' is the description (LICENCIAS)
+        const locationDesc = getValue(row, ['Unnamed: 15', 'Ubicacion Descripcion']) || '';
+        const locationCode = getValue(row, ['Ubicacion', 'Location', 'U1']) || '';
+        const locationVal = locationDesc || locationCode;
+
+        // Rama: Code (Rama) + Description (Unnamed: 21)
+        const branchCode = getValue(row, ['Rama', 'Branch', 'RamCod']) || '';
+        const branchDesc = getValue(row, ['Unnamed: 21', 'Rama Descripcion']) || '';
+        let branchVal = branchDesc;
+        if (branchCode && branchDesc) {
+            branchVal = `${branchCode} - ${branchDesc}`;
+        } else if (branchCode) {
+            branchVal = branchCode;
+        }
+
+        // CUIL: Found 'CUIL'
+        const cuilVal = getValue(row, ['CUIL', 'Cuil', 'C.U.I.L.']) || '';
+
+        // Antiguedad: User confirmed 'Antig Total Años'
+        // STRICTLY forcing this column to avoid 'Antig Rec Años'
+        const seniorityVal = getValue(row, ['Antig Total Años']) || '-';
+        // console.log(`Row ${index}: Seniority = ${seniorityVal}`);
 
         let birthDate = null;
 
@@ -335,7 +370,11 @@ async function analyzeData(data) {
             agreement,
             law,
             affiliateStatus,
-            ministry
+            ministry,
+            location: locationVal,
+            branch: branchVal,
+            cuil: cuilVal,
+            seniority: seniorityVal
         });
     }
 
@@ -388,7 +427,11 @@ async function loadAgents() {
                 agreement: a.agreement,
                 law: a.law,
                 affiliateStatus: a.affiliate_status,
-                ministry: a.ministry
+                ministry: a.ministry,
+                location: a.location,
+                branch: a.branch,
+                cuil: a.cuil,
+                seniority: a.seniority
             }));
             sortAgents();
 
@@ -472,6 +515,7 @@ function renderDashboard() {
             <td>${birthDateStr}</td>
             <td>${agent.age !== null ? agent.age + ' años' : '-'}</td>
             <td>${agent.gender}</td>
+            <td>${agent.seniority || '-'}</td>
             <td>${rDateStr}</td>
             <td>
                 <span class="status-badge status-${agent.status.code}">
@@ -535,10 +579,14 @@ function openDetailsModal(id) {
     if (!agent) return;
 
     document.getElementById('detail-fullname').textContent = agent.fullName;
+    document.getElementById('detail-cuil').textContent = agent.cuil || '-';
     document.getElementById('detail-agreement').textContent = agent.agreement || '-';
     document.getElementById('detail-law').textContent = agent.law || '-';
     document.getElementById('detail-affiliate').textContent = agent.affiliateStatus || '-';
     document.getElementById('detail-ministry').textContent = agent.ministry || '-';
+    document.getElementById('detail-location').textContent = agent.location || '-';
+    document.getElementById('detail-branch').textContent = agent.branch || '-';
+    document.getElementById('detail-seniority').textContent = agent.seniority || '-';
 
     const modal = document.getElementById('agent-details-modal');
     if (modal) modal.classList.remove('hidden');
@@ -606,6 +654,160 @@ async function handleManualAdd(e) {
     }
 }
 
+// --- Chatbot Logic ---
+
+function toggleChatbot() {
+    const window = document.getElementById('chatbot-window');
+    window.classList.toggle('hidden');
+    if (!window.classList.contains('hidden')) {
+        document.getElementById('chat-input').focus();
+    }
+}
+
+function handleChatInput(e) {
+    if (e.key === 'Enter') {
+        sendMessage();
+    }
+}
+
+function sendMessage() {
+    const input = document.getElementById('chat-input');
+    const text = input.value.trim();
+    if (!text) return;
+
+    addMessage(text, 'user');
+    input.value = '';
+
+    // Process logic with a small delay to simulate "thinking"
+    setTimeout(() => {
+        const response = processUserQuery(text);
+        addMessage(response, 'bot');
+    }, 400);
+}
+
+function addMessage(text, sender) {
+    const container = document.getElementById('chatbot-messages');
+    const div = document.createElement('div');
+    div.className = `message ${sender}`;
+    div.innerHTML = text.replace(/\n/g, '<br>');
+    container.appendChild(div);
+    container.scrollTop = container.scrollHeight;
+}
+
+function processUserQuery(query) {
+    const lower = query.toLowerCase();
+
+    // Command: Reset/Clean
+    if (lower.includes('reset') || lower.includes('limpiar') || lower.includes('todos') || lower.includes('borrar filtro')) {
+        loadAgents(); // Reloads full list
+        return 'He reseteado los filtros. Mostrando todos los agentes.';
+    }
+
+    // Command: Filter by Ministry/Jurisdiccion/Branch
+    if (lower.includes('filtrar') || lower.includes('busca en') || lower.includes('muestrame') || lower.includes('ver')) {
+        // Extract search term
+        let term = lower.replace('filtrar', '').replace('por', '').replace('busca en', '').replace('muestrame', '').replace('ver', '').replace('los de', '').trim();
+
+        if (!term) return '¿Por qué criterio querés filtrar? (Ej: "Filtrar por Hacienda")';
+
+        const filtered = globalAgents.filter(a => {
+            const t = term.toLowerCase();
+            return (
+                (a.ministry && a.ministry.toLowerCase().includes(t)) ||
+                (a.branch && a.branch.toLowerCase().includes(t)) ||
+                (a.location && a.location.toLowerCase().includes(t)) ||
+                (a.status && a.status.label.toLowerCase().includes(t))
+            );
+        });
+
+        if (filtered.length > 0) {
+            renderFilteredAgents(filtered);
+            return `Encontré ${filtered.length} agentes que coinciden con "${term}".`;
+        } else {
+            return `No encontré agentes con el criterio "${term}".`;
+        }
+    }
+
+    // Command: Count Status
+    if (lower.includes('cuantos') || lower.includes('cantidad')) {
+        let count = 0;
+        let type = '';
+
+        if (lower.includes('vencido')) {
+            count = globalAgents.filter(a => a.status.code === 'vencido').length;
+            type = 'Vencidos';
+        } else if (lower.includes('proximo') || lower.includes('próximo')) {
+            count = globalAgents.filter(a => a.status.code === 'proximo').length;
+            type = 'Próximos a jubilarse';
+        } else if (lower.includes('inminente')) {
+            count = globalAgents.filter(a => a.status.code === 'inminente').length;
+            type = 'Inminentes';
+        } else {
+            return '¿Qué cantidad querés saber? Probá "Cuántos vencidos hay" o "Cuántos próximos".';
+        }
+
+        return `Hay **${count}** agentes en estado ${type}.`;
+    }
+
+    // Command: Search specific person
+    if (lower.includes('buscar a') || lower.includes('quien es')) {
+        const name = lower.replace('buscar a', '').replace('quien es', '').trim();
+        const found = globalAgents.filter(a => a.fullName.toLowerCase().includes(name));
+
+        if (found.length === 1) {
+            openDetailsModal(found[0].id);
+            return `¡Encontrado! Te abrí la ficha de ${found[0].fullName}.`;
+        } else if (found.length > 1) {
+            renderFilteredAgents(found);
+            return `Encontré a ${found.length} personas con ese nombre. Te las muestro en la tabla.`;
+        } else {
+            return `No encontré a nadie llamado "${name}".`;
+        }
+    }
+
+    return 'No entendí esa orden. Probá con:\n• "Filtrar por [Sector]"\n• "Buscar a [Nombre]"\n• "Cuántos vencidos hay"';
+}
+
+function renderFilteredAgents(filteredList) {
+    // Determine target table body (reuse existing logic logic would be better but simple copy for now)
+    const tableBody = document.getElementById('table-body');
+    tableBody.innerHTML = '';
+
+    // Update stats logic specifically for filter view? usually stats stick to global or current view.
+    // Let's just render rows.
+
+    filteredList.forEach(agent => {
+        const row = document.createElement('tr');
+
+        let birthDateStr = agent.birthDate ? new Date(agent.birthDate).toLocaleDateString('es-AR') : '-';
+        let rDateStr = agent.retirementDate ? new Date(agent.retirementDate).toLocaleDateString('es-AR') : '-';
+
+        row.innerHTML = `
+            <td>
+                <div style="font-weight: 500; cursor: pointer; color: var(--primary);" onclick="openDetailsModal('${agent.id}')">
+                    ${agent.fullName}
+                </div>
+            </td>
+            <td>${birthDateStr}</td>
+            <td>${agent.age !== null ? agent.age + ' años' : '-'}</td>
+            <td>${agent.gender}</td>
+            <td>${agent.seniority || '-'}</td>
+            <td>${rDateStr}</td>
+            <td>
+                <span class="status-badge status-${agent.status.code}">
+                    ${agent.status.label}
+                </span>
+            </td>
+            <td>
+                <button class="btn-secondary btn-danger" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;" onclick="deleteAgent('${agent.id}')">
+                    <i class="ph ph-trash"></i>
+                </button>
+            </td>
+        `;
+        tableBody.appendChild(row);
+    });
+}
+
 // --- Expose to Window ---
 window.handleFileSelect = handleFileSelect;
 window.triggerDashboardUpload = triggerDashboardUpload;
@@ -624,3 +826,7 @@ window.handleRegister = handleRegister;
 window.toggleAuthMode = toggleAuthMode;
 window.logout = logout;
 window.analyzeData = analyzeData;
+// Chatbot
+window.toggleChatbot = toggleChatbot;
+window.handleChatInput = handleChatInput;
+window.sendMessage = sendMessage;
