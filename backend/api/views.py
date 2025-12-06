@@ -21,8 +21,18 @@ class CustomTokenObtainPairView(TokenObtainPairView):
 
 class RegisterView(generics.CreateAPIView):
     queryset = User.objects.all()
+    # permission_classes = (permissions.AllowAny,) # Default is AllowAny? Let's be explicit
     permission_classes = (permissions.AllowAny,)
     serializer_class = UserSerializer
+
+    def create(self, request, *args, **kwargs):
+        try:
+            return super().create(request, *args, **kwargs)
+        except Exception as e:
+            # Log the error for debugging (print to stdout for Railway logs)
+            import traceback
+            traceback.print_exc()
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class AgentViewSet(viewsets.ModelViewSet):
     serializer_class = AgentSerializer
