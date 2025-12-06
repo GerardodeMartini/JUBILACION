@@ -19,7 +19,7 @@
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 
     <link rel="stylesheet" href="/static/styles.css">
-    <script type="module" src="/static/script.js?v=2"></script>
+    <script type="module" src="/static/script.js?v=17"></script>
 
     <style>
         /* Chatbot Styles */
@@ -195,21 +195,27 @@
                                 <button class="btn-secondary small" onclick="openUploadModal()">
                                     <i class="ph ph-microsoft-excel-logo"></i> Importar Excel
                                 </button>
+                                <button class="btn-secondary small" onclick="loadAgents()">
+                                    <i class="ph ph-arrow-counter-clockwise"></i> Volver a Lista
+                                </button>
                                 <button class="btn-secondary small" onclick="clearAllData()">
                                     <i class="ph ph-trash"></i> Borrar Todo
                                 </button>
                             </div>
                         </div>
                         <div class="stats-container">
-                            <div class="stat-card" data-type="total">
+                            <div class="stat-card" data-type="total" onclick="loadAgents()" style="cursor: pointer;"
+                                title="Ver todos">
                                 <span class="stat-label">Total Agentes</span>
                                 <span class="stat-value" id="total-count">0</span>
                             </div>
-                            <div class="stat-card urgent" data-type="vencido">
+                            <div class="stat-card urgent" data-type="vencido" onclick="filterByStatus('vencido')"
+                                style="cursor: pointer;" title="Filtrar Vencidos">
                                 <span class="stat-label">Vencidos</span>
                                 <span class="stat-value" id="vencido-count">0</span>
                             </div>
-                            <div class="stat-card warning" data-type="proximo">
+                            <div class="stat-card warning" data-type="proximo" onclick="filterByStatus('proximo')"
+                                style="cursor: pointer;" title="Filtrar Próximos">
                                 <span class="stat-label">Próximos (2 años)</span>
                                 <span class="stat-value" id="proximo-count">0</span>
                             </div>
@@ -303,33 +309,46 @@
 
             <!-- Modal for Agent Details -->
             <div id="agent-details-modal" class="modal hidden">
-                <div class="modal-content card" style="max-width: 500px;">
-                    <div class="modal-header">
-                        <h3>Detalles del Agente</h3>
-                        <button class="btn-icon" onclick="closeDetailsModal()"><i class="ph ph-x"></i></button>
+                <div class="modal-content card" style="max-width: 600px;">
+                    <button class="btn-icon" style="position: absolute; top: 1rem; right: 1rem;"
+                        onclick="closeDetailsModal()">
+                        <i class="ph ph-x"></i>
+                    </button>
+
+                    <div class="modal-header" style="text-align: center; margin-bottom: 1.5rem;">
+                        <h3 id="detail-name" style="font-size: 1.5rem; color: var(--primary); margin-bottom: 0.5rem;">
+                            Nombre del Agente</h3>
+                        <span id="detail-status" class="status-badge">Estado</span>
                     </div>
-                    <div class="details-content" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                        <div class="detail-item" style="grid-column: span 2;">
-                            <span class="detail-label">Nombre Completo:</span>
-                            <span class="detail-value" id="detail-fullname">-</span>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; text-align: left;">
+                        <div class="detail-item">
+                            <span class="detail-label">DNI:</span>
+                            <span class="detail-value" id="detail-dni">-</span>
                         </div>
                         <div class="detail-item">
                             <span class="detail-label">CUIL:</span>
                             <span class="detail-value" id="detail-cuil">-</span>
                         </div>
                         <div class="detail-item">
-                            <span class="detail-label">Afiliado:</span>
-                            <span class="detail-value" id="detail-affiliate">-</span>
+                            <span class="detail-label">Edad:</span>
+                            <span class="detail-value" id="detail-age">-</span>
                         </div>
                         <div class="detail-item">
-                            <span class="detail-label">Convenio:</span>
-                            <span class="detail-value" id="detail-agreement">-</span>
+                            <span class="detail-label">Género:</span>
+                            <span class="detail-value" id="detail-gender">-</span>
                         </div>
                         <div class="detail-item">
-                            <span class="detail-label">Ley:</span>
-                            <span class="detail-value" id="detail-law">-</span>
+                            <span class="detail-label">Fecha Nacimiento:</span>
+                            <span class="detail-value" id="detail-birthdate">-</span>
                         </div>
-                        <div class="detail-item" style="grid-column: span 2;">
+                        <div class="detail-item">
+                            <span class="detail-label">Fecha Retiro:</span>
+                            <span class="detail-value" id="detail-retirement-date">-</span>
+                        </div>
+
+                        <div class="detail-item"
+                            style="grid-column: span 2; border-top: 1px solid var(--border); margin-top: 0.5rem; padding-top: 0.5rem;">
                             <span class="detail-label">Jurisdicción:</span>
                             <span class="detail-value" id="detail-ministry">-</span>
                         </div>
@@ -342,11 +361,24 @@
                             <span class="detail-value" id="detail-branch">-</span>
                         </div>
                         <div class="detail-item">
-                            <span class="detail-label">Años de Antigüedad:</span>
+                            <span class="detail-label">Convenio:</span>
+                            <span class="detail-value" id="detail-agreement">-</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Ley:</span>
+                            <span class="detail-value" id="detail-law">-</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Afiliado:</span>
+                            <span class="detail-value" id="detail-affiliate">-</span>
+                        </div>
+                        <div class="detail-item" style="grid-column: span 2;">
+                            <span class="detail-label">Antigüedad Total:</span>
                             <span class="detail-value" id="detail-seniority">-</span>
                         </div>
                     </div>
-                    <div class="modal-actions" style="margin-top: 1.5rem;">
+
+                    <div class="modal-actions" style="margin-top: 2rem; justify-content: center;">
                         <button class="btn-secondary" onclick="closeDetailsModal()">Cerrar</button>
                     </div>
                 </div>
@@ -361,15 +393,22 @@
         </button>
         <div id="chatbot-window" class="chatbot-window hidden">
             <div class="chatbot-header">
-                <h3>Asistente Virtual</h3>
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <div
+                        style="background: white; color: var(--primary); width: 2rem; height: 2rem; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold;">
+                        P</div>
+                    <h3>Pilin</h3>
+                </div>
                 <button onclick="toggleChatbot()"><i class="ph ph-x"></i></button>
             </div>
             <div id="chatbot-messages" class="chatbot-messages">
                 <div class="message bot">
-                    Hola, soy tu asistente. Podés pedirme cosas como:
-                    <br>• "Filtrar por Hacienda"
-                    <br>• "Buscar a Lopez"
-                    <br>• "¿Cuántos se jubilan pronto?"
+                    ¡Hola! Soy <b>Pilin</b>, tu asistente virtual. 🤖
+                    <br>Estoy acá para ayudarte a analizar el padrón.
+                    <br><br>Podés decirme:
+                    <br>• "Buscame a Gomez"
+                    <br>• "Filtrame los de Salud"
+                    <br>• "¿Cuántos se jubilan ya?"
                 </div>
             </div>
             <div class="chatbot-input">

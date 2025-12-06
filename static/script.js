@@ -316,6 +316,9 @@ async function analyzeData(data) {
         // CUIL: Found 'CUIL'
         const cuilVal = getValue(row, ['CUIL', 'Cuil', 'C.U.I.L.']) || '';
 
+        // DNI: Column D (D1)
+        const dniVal = getValue(row, ['DNI', 'Documento', 'D1', 'Unnamed: 3']) || '-';
+
         // Antiguedad: User confirmed 'Antig Total Años'
         // STRICTLY forcing this column to avoid 'Antig Rec Años'
         const seniorityVal = getValue(row, ['Antig Total Años']) || '-';
@@ -374,6 +377,7 @@ async function analyzeData(data) {
             location: locationVal,
             branch: branchVal,
             cuil: cuilVal,
+            dni: dniVal,
             seniority: seniorityVal
         });
     }
@@ -574,29 +578,6 @@ function closeUploadModal() {
     if (modal) modal.classList.add('hidden');
 }
 
-function openDetailsModal(id) {
-    const agent = globalAgents.find(a => a.id === id);
-    if (!agent) return;
-
-    document.getElementById('detail-fullname').textContent = agent.fullName;
-    document.getElementById('detail-cuil').textContent = agent.cuil || '-';
-    document.getElementById('detail-agreement').textContent = agent.agreement || '-';
-    document.getElementById('detail-law').textContent = agent.law || '-';
-    document.getElementById('detail-affiliate').textContent = agent.affiliateStatus || '-';
-    document.getElementById('detail-ministry').textContent = agent.ministry || '-';
-    document.getElementById('detail-location').textContent = agent.location || '-';
-    document.getElementById('detail-branch').textContent = agent.branch || '-';
-    document.getElementById('detail-seniority').textContent = agent.seniority || '-';
-
-    const modal = document.getElementById('agent-details-modal');
-    if (modal) modal.classList.remove('hidden');
-}
-
-function closeDetailsModal() {
-    const modal = document.getElementById('agent-details-modal');
-    if (modal) modal.classList.add('hidden');
-}
-
 async function handleManualAdd(e) {
     e.preventDefault();
 
@@ -654,6 +635,57 @@ async function handleManualAdd(e) {
     }
 }
 
+// --- Details Modal Logic ---
+
+function openDetailsModal(id) {
+    const agent = globalAgents.find(a => a.id == id);
+    if (!agent) return;
+
+    // Helper safely get element
+    const setVal = (id, val) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = val || '-';
+    };
+
+    setVal('detail-name', agent.fullName);
+    setVal('detail-dni', agent.dni);
+    setVal('detail-cuil', agent.cuil);
+    setVal('detail-age', agent.age !== null ? agent.age + ' años' : '-');
+    setVal('detail-gender', agent.gender);
+    setVal('detail-birthdate', agent.birthDate ? new Date(agent.birthDate).toLocaleDateString('es-AR') : '-');
+    setVal('detail-retirement-date', agent.retirementDate ? new Date(agent.retirementDate).toLocaleDateString('es-AR') : '-');
+
+    setVal('detail-ministry', agent.ministry);
+    setVal('detail-location', agent.location);
+    setVal('detail-branch', agent.branch);
+    setVal('detail-agreement', agent.agreement);
+    setVal('detail-law', agent.law);
+    setVal('detail-affiliate', agent.affiliateStatus);
+    setVal('detail-seniority', agent.seniority ? agent.seniority + ' años' : '-');
+
+    const statusEl = document.getElementById('detail-status');
+    if (statusEl) {
+        statusEl.textContent = agent.status.label;
+        statusEl.className = `status-badge status-${agent.status.code}`;
+    }
+
+    const modal = document.getElementById('agent-details-modal');
+    if (modal) modal.classList.remove('hidden');
+}
+
+function closeDetailsModal() {
+    const modal = document.getElementById('agent-details-modal');
+    if (modal) modal.classList.add('hidden');
+}
+
+// Close on outside click
+window.addEventListener('click', (e) => {
+    const dModal = document.getElementById('agent-details-modal');
+    if (dModal && e.target === dModal) {
+        closeDetailsModal();
+    }
+});
+
 // --- Chatbot Logic ---
 
 function toggleChatbot() {
@@ -698,17 +730,78 @@ function processUserQuery(query) {
     const lower = query.toLowerCase();
 
     // Command: Reset/Clean
-    if (lower.includes('reset') || lower.includes('limpiar') || lower.includes('todos') || lower.includes('borrar filtro')) {
-        loadAgents(); // Reloads full list
-        return 'He reseteado los filtros. Mostrando todos los agentes.';
+    if (lower.includes('reset') || lower.includes('limpiar') || lower.includes('todos') || lower.includes('borrar') || lower.includes('inicio') || lower.includes('volver') || lower.includes('lista') || lower.includes('original')) {
+        loadAgents();
+        return 'Listo jefe, volví a cargar la lista completa. Ahí tenés a todos de nuevo.';
+    }
+
+    // Command: Search by DNI (Column D or CUIL)
+    const dniMatch = lower.match(/\b\d{7,8}\b/);
+    if (dniMatch) {
+        const dni = dniMatch[0];
+
+        const found = globalAgents.filter(a => {
+            // Priority 1: Check Explicit DNI field (Column D)
+            if (a.dni && a.dni.toString().includes(dni)) return true;
+
+            // Priority 2: Check inside CUIL (fallback)
+            if (a.cuil) {
+                const cuilClean = a.cuil.toString().replace(/-/g, '');
+                if (cuilClean.includes(dni)) return true;
+            }
+            return false;
+        });
+
+        if (found.length === 1) {
+            openDetailsModal(found[0].id);
+            return `¡Encontré el DNI **${dni}**! Es ${found[0].fullName}. Te abrí su ficha (Datos tomados de Columna DNI).`;
+        } else if (found.length > 1) {
+            renderFilteredAgents(found);
+            return `Encontré a ${found.length} personas con ese DNI. Fijate en la tabla.`;
+        } else {
+            return `Busqué el DNI **${dni}** en la Columna D y en los CUILs, pero no apareció nadie. ¿Seguro que está bien?`;
+        }
+    }
+
+    // Command: Filter by Seniority (Antigüedad) or Age (Edad)
+    if (lower.includes('antigüedad') || lower.includes('años') || lower.includes('edad')) {
+        const numMatch = lower.match(/(\d+)/);
+        if (numMatch) {
+            const num = parseInt(numMatch[0], 10);
+            let filtered = [];
+            let msg = '';
+            // Determine if we are filtering by Seniority or Age
+            const isAge = lower.includes('edad');
+            const criteriaName = isAge ? 'edad' : 'antigüedad';
+
+            // Helper to get value based on criteria
+            const getValue = (a) => isAge ? (a.age || 0) : (parseInt(a.seniority) || 0);
+
+            if (lower.includes('mayor') || lower.includes('mas de') || lower.includes('más de')) {
+                filtered = globalAgents.filter(a => getValue(a) > num);
+                msg = `mayores a ${num} años (${criteriaName})`;
+            } else if (lower.includes('menor') || lower.includes('menos de')) {
+                filtered = globalAgents.filter(a => getValue(a) < num);
+                msg = `menores a ${num} años (${criteriaName})`;
+            } else {
+                filtered = globalAgents.filter(a => getValue(a) === num);
+                msg = `con exactamente ${num} años (${criteriaName})`;
+            }
+
+            if (filtered.length > 0) {
+                renderFilteredAgents(filtered);
+                return `Filtré por ${criteriaName}: encontré **${filtered.length}** agentes ${msg}.`;
+            } else {
+                return `No encontré a nadie con esa ${criteriaName} (${msg}).`;
+            }
+        }
     }
 
     // Command: Filter by Ministry/Jurisdiccion/Branch
-    if (lower.includes('filtrar') || lower.includes('busca en') || lower.includes('muestrame') || lower.includes('ver')) {
-        // Extract search term
-        let term = lower.replace('filtrar', '').replace('por', '').replace('busca en', '').replace('muestrame', '').replace('ver', '').replace('los de', '').trim();
+    if (lower.includes('filtrar') || lower.includes('busca en') || lower.includes('muestrame') || lower.includes('ver') || lower.includes('traeme')) {
+        let term = lower.replace('filtrar', '').replace('por', '').replace('busca en', '').replace('muestrame', '').replace('ver', '').replace('los de', '').replace('traeme', '').replace('a los', '').trim();
 
-        if (!term) return '¿Por qué criterio querés filtrar? (Ej: "Filtrar por Hacienda")';
+        if (!term) return '¿A quiénes buscamos? Decime un sector, como "Salud" o "Vialidad".';
 
         const filtered = globalAgents.filter(a => {
             const t = term.toLowerCase();
@@ -722,59 +815,59 @@ function processUserQuery(query) {
 
         if (filtered.length > 0) {
             renderFilteredAgents(filtered);
-            return `Encontré ${filtered.length} agentes que coinciden con "${term}".`;
+            return `¡Encontré a ${filtered.length} agentes en "${term}"! Ya te actualicé la tabla.`;
         } else {
-            return `No encontré agentes con el criterio "${term}".`;
+            return `Mmm... busqué por todos lados pero no encontré nada con "${term}". ¿Probamos otra cosa?`;
         }
     }
 
     // Command: Count Status
-    if (lower.includes('cuantos') || lower.includes('cantidad')) {
+    if (lower.includes('cuantos') || lower.includes('cantidad') || lower.includes('hay')) {
         let count = 0;
         let type = '';
 
         if (lower.includes('vencido')) {
             count = globalAgents.filter(a => a.status.code === 'vencido').length;
-            type = 'Vencidos';
+            type = 'que ya se tienen que jubilar (Vencidos)';
         } else if (lower.includes('proximo') || lower.includes('próximo')) {
             count = globalAgents.filter(a => a.status.code === 'proximo').length;
-            type = 'Próximos a jubilarse';
+            type = 'que les falta poco (Próximos)';
         } else if (lower.includes('inminente')) {
             count = globalAgents.filter(a => a.status.code === 'inminente').length;
-            type = 'Inminentes';
+            type = 'a punto de salir (Inminentes)';
         } else {
             return '¿Qué cantidad querés saber? Probá "Cuántos vencidos hay" o "Cuántos próximos".';
         }
 
-        return `Hay **${count}** agentes en estado ${type}.`;
+        return `Según mis cálculos, hay **${count}** agentes ${type}.`;
     }
 
     // Command: Search specific person
-    if (lower.includes('buscar a') || lower.includes('quien es')) {
-        const name = lower.replace('buscar a', '').replace('quien es', '').trim();
+    if (lower.includes('buscar a') || lower.includes('quien es') || lower.includes('buscame a')) {
+        const name = lower.replace('buscar a', '').replace('quien es', '').replace('buscame a', '').replace('por dni', '').trim();
+
+        if (!name || /^\d+$/.test(name)) return 'No entendí el nombre. Si querés buscar por DNI, escribí solo el número o "DNI [Numero]".';
+
         const found = globalAgents.filter(a => a.fullName.toLowerCase().includes(name));
 
         if (found.length === 1) {
             openDetailsModal(found[0].id);
-            return `¡Encontrado! Te abrí la ficha de ${found[0].fullName}.`;
+            return `¡Acá está! Te abrí la ficha de ${found[0].fullName}.`;
         } else if (found.length > 1) {
             renderFilteredAgents(found);
-            return `Encontré a ${found.length} personas con ese nombre. Te las muestro en la tabla.`;
+            return `Encontré a ${found.length} personas que coinciden con "${name}". Fijate en la tabla cuál es el que buscás.`;
         } else {
-            return `No encontré a nadie llamado "${name}".`;
+            return `No me suena "${name}" en este padrón. ¿Estará bien escrito el apellido?`;
         }
     }
 
-    return 'No entendí esa orden. Probá con:\n• "Filtrar por [Sector]"\n• "Buscar a [Nombre]"\n• "Cuántos vencidos hay"';
+    return 'No entendí esa orden. Probá con:\n• "Buscame al DNI 12345678"\n• "Ver los de Salud"\n• "Edad mayor a 55"\n• "Reset"';
 }
 
 function renderFilteredAgents(filteredList) {
-    // Determine target table body (reuse existing logic logic would be better but simple copy for now)
     const tableBody = document.getElementById('table-body');
+    if (!tableBody) return;
     tableBody.innerHTML = '';
-
-    // Update stats logic specifically for filter view? usually stats stick to global or current view.
-    // Let's just render rows.
 
     filteredList.forEach(agent => {
         const row = document.createElement('tr');
@@ -808,13 +901,18 @@ function renderFilteredAgents(filteredList) {
     });
 }
 
+// Filter by Status Code (clicked from cards)
+function filterByStatus(code) {
+    const filtered = globalAgents.filter(a => a.status.code === code);
+    renderFilteredAgents(filtered);
+}
+
 // --- Expose to Window ---
 window.handleFileSelect = handleFileSelect;
 window.triggerDashboardUpload = triggerDashboardUpload;
 window.clearAllData = clearAllData;
 window.openModal = openModal;
 window.closeModal = closeModal;
-window.openUploadModal = openUploadModal;
 window.openUploadModal = openUploadModal;
 window.closeUploadModal = closeUploadModal;
 window.openDetailsModal = openDetailsModal;
@@ -826,6 +924,8 @@ window.handleRegister = handleRegister;
 window.toggleAuthMode = toggleAuthMode;
 window.logout = logout;
 window.analyzeData = analyzeData;
+window.filterByStatus = filterByStatus;
+window.loadAgents = loadAgents;
 // Chatbot
 window.toggleChatbot = toggleChatbot;
 window.handleChatInput = handleChatInput;
