@@ -731,8 +731,15 @@ function addMessage(text, sender) {
     container.scrollTop = container.scrollHeight;
 }
 
+// Helper for accent-insensitive comparison
+function normalizeString(str) {
+    if (!str) return '';
+    return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+}
+
 function processUserQuery(query) {
-    const lower = query.toLowerCase();
+    const normalizedQuery = normalizeString(query);
+    const lower = query.toLowerCase().trim();
 
     // Command: Reset/Clean
     if (lower.includes('reset') || lower.includes('limpiar') || lower.includes('todos') || lower.includes('borrar') || lower.includes('inicio') || lower.includes('volver') || lower.includes('lista') || lower.includes('original')) {
@@ -740,35 +747,63 @@ function processUserQuery(query) {
         return 'Listo jefe, volví a cargar la lista completa. Ahí tenés a todos de nuevo.';
     }
 
-    // Command: Search by DNI (Column D or CUIL)
-    const dniMatch = lower.match(/\b\d{7,8}\b/);
-    if (dniMatch) {
-        const dni = dniMatch[0];
+    // --- SMART NUMERIC SEARCH (DNI or Affiliate) ---
+    // Matches if the query is a number of at least 4 digits
+    const numberMatch = lower.match(/^\d{4,}$/);
+    if (numberMatch) {
+        const numStr = numberMatch[0];
 
+        // Search in DNI and Affiliate Status (which holds the affiliate number)
         const found = globalAgents.filter(a => {
-            // Priority 1: Check Explicit DNI field (Column D)
-            if (a.dni && a.dni.toString().includes(dni)) return true;
-
-            // Priority 2: Check inside CUIL (fallback)
-            if (a.cuil) {
-                const cuilClean = a.cuil.toString().replace(/-/g, '');
-                if (cuilClean.includes(dni)) return true;
-            }
-            return false;
+            const dniMatch = a.dni && a.dni.toString().includes(numStr);
+            // Check affiliateStatus. Sometimes it is mixed text, so we check if it includes the number
+            const affMatch = a.affiliateStatus && a.affiliateStatus.toString().includes(numStr);
+            return dniMatch || affMatch;
         });
 
         if (found.length === 1) {
-            openDetailsModal(found[0].id);
-            return `¡Encontré el DNI **${dni}**! Es ${found[0].fullName}. Te abrí su ficha (Datos tomados de Columna DNI).`;
+            const agent = found[0];
+            const isDni = agent.dni && agent.dni.toString().includes(numStr);
+            const isAff = agent.affiliateStatus && agent.affiliateStatus.toString().includes(numStr);
+
+            let reason = "";
+            if (isDni && isAff) reason = "por DNI y Nro. de Afiliado";
+            else if (isDni) reason = "por DNI";
+            else if (isAff) reason = "por Nro. de Afiliado";
+
+            openDetailsModal(agent.id);
+            return `¡Encontrado! Es **${agent.fullName}** (lo encontré ${reason}: ${numStr}).`;
+
         } else if (found.length > 1) {
             renderFilteredAgents(found);
-            return `Encontré a ${found.length} personas con ese DNI. Fijate en la tabla.`;
+            return `Encontré a **${found.length}** agentes que coinciden con el número **${numStr}** (en DNI o Afiliado). Mirá la tabla.`;
         } else {
-            return `Busqué el DNI **${dni}** en la Columna D y en los CUILs, pero no apareció nadie. ¿Seguro que está bien?`;
+            return `Busqué el número **${numStr}** como DNI y como Nro. de Afiliado, pero no encontré a nadie.`;
         }
     }
 
-    // Command: Filter by Seniority (Antigüedad) or Age (Edad)
+    // --- SURNAME SEARCH (Single Word) ---
+    // If it's a single word and not a number, treat as Surname search
+    if (/^[a-zñáéíóúü]+$/i.test(lower)) {
+        const found = globalAgents.filter(a => {
+            // Normalize agent full name too
+            const agentNameNorm = normalizeString(a.fullName);
+            return agentNameNorm.includes(normalizedQuery);
+        });
+
+        if (found.length > 0) {
+            renderFilteredAgents(found);
+            if (found.length === 1) {
+                openDetailsModal(found[0].id);
+                return `Encontré a **${found[0].fullName}**. Aquí tenés su ficha.`;
+            }
+            return `Encontré a **${found.length}** agentes con el nombre/apellido "${query}".`;
+        } else {
+            return `No encontré a nadie con el apellido o nombre "${query}".`;
+        }
+    }
+
+    // --- Legacy Filters (Age/Seniority) ---
     if (lower.includes('antigüedad') || lower.includes('años') || lower.includes('edad')) {
         const numMatch = lower.match(/(\d+)/);
         if (numMatch) {
@@ -801,6 +836,7 @@ function processUserQuery(query) {
             }
         }
     }
+
 
     // Command: Filter by Ministry/Jurisdiccion/Branch
     if (lower.includes('filtrar') || lower.includes('busca en') || lower.includes('muestrame') || lower.includes('ver') || lower.includes('traeme')) {
