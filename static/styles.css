@@ -658,3 +658,59 @@ select:focus {
 .fade-in {
     animation: fadeIn 0.5s ease-in-out;
 }
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+    .landing-hero {
+        padding: 6rem 1rem 120px 1rem;
+        /* More top padding for nav, bottom for footer */
+        justify-content: flex-start;
+        /* Align top on mobile */
+    }
+
+    .hero-content h1 {
+        font-size: 2.5rem;
+    }
+
+    .hero-content .subtitle {
+        font-size: 1.1rem;
+        margin-bottom: 2rem;
+    }
+
+    .hero-features {
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+
+    .landing-nav {
+        padding: 1rem;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .nav-logo {
+        margin-bottom: 0.5rem;
+    }
+
+    .nav-actions {
+        width: 100%;
+        justify-content: center;
+        gap: 1rem;
+    }
+
+    .landing-footer {
+        flex-direction: column;
+        padding: 1rem;
+        padding-bottom: 1.5rem;
+    }
+
+    .landing-copyright {
+        position: static;
+        margin-top: 0.5rem;
+        text-align: center;
+    }
+
+    #weather-widget {
+        min-width: auto;
+    }
+}
