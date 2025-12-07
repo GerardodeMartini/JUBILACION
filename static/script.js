@@ -316,8 +316,12 @@ async function analyzeData(data) {
         // CUIL: Found 'CUIL'
         const cuilVal = getValue(row, ['CUIL', 'Cuil', 'C.U.I.L.']) || '';
 
-        // DNI: Column D (D1)
-        const dniVal = getValue(row, ['DNI', 'Documento', 'D1', 'Unnamed: 3']) || '-';
+        // DNI: Column D (DNI or D1) - Prioritize explicit column D
+        let dniVal = getValue(row, ['DNI', 'D1', 'Documento', 'Unnamed: 3']) || '-';
+        if (dniVal && dniVal !== '-') {
+            // Clean up DNI (remove dots, just keep numbers)
+            dniVal = dniVal.toString().replace(/\./g, '').trim();
+        }
 
         // Antiguedad: User confirmed 'Antig Total Años'
         // STRICTLY forcing this column to avoid 'Antig Rec Años'
@@ -435,6 +439,7 @@ async function loadAgents() {
                 location: a.location,
                 branch: a.branch,
                 cuil: a.cuil,
+                dni: a.dni,
                 seniority: a.seniority
             }));
             sortAgents();

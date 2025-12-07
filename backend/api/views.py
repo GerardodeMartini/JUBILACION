@@ -79,6 +79,7 @@ class AgentViewSet(viewsets.ModelViewSet):
                         'location': agent_data.get('location'),
                         'branch': agent_data.get('branch'),
                         'cuil': agent_data.get('cuil'),
+                        'dni': agent_data.get('dni'),
                         'seniority': agent_data.get('seniority'),
                         'user': request.user.id
                     }
@@ -112,6 +113,7 @@ class AgentViewSet(viewsets.ModelViewSet):
                 'location': 'location',
                 'branch': 'branch',
                 'cuil': 'cuil',
+                'dni': 'dni',
                 'seniority': 'seniority'
             }
             for camel, snake in mapping.items():

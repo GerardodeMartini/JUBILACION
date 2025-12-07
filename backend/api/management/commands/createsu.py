@@ -1,11 +1,12 @@
 from django.core.management.base import BaseCommand
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 import os
 
 class Command(BaseCommand):
     help = 'Creates a superuser if it does not exist'
 
     def handle(self, *args, **options):
+        User = get_user_model()
         username = os.environ.get('DJANGO_SUPERUSER_USERNAME', 'admin')
         password = os.environ.get('DJANGO_SUPERUSER_PASSWORD', 'admin123')
         email = os.environ.get('DJANGO_SUPERUSER_EMAIL', 'admin@example.com')
