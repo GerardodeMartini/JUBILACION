@@ -1301,6 +1301,7 @@ select:focus {
         font-size: 0.9rem;
     }
 }
+
 /* Chatbot Global Styles */
 .chatbot-widget {
     position: fixed;
@@ -1438,4 +1439,47 @@ select:focus {
     display: flex;
     align-items: center;
     justify-content: center;
+}
+
+/* Chatbot Mobile Responsiveness */
+@media (max-width: 768px) {
+
+    /* Adjust Widget Button Position */
+    .chatbot-widget {
+        bottom: 1rem;
+        right: 1rem;
+    }
+
+    .chatbot-toggle {
+        width: 3.5rem;
+        height: 3.5rem;
+    }
+
+    /* Full Screen Window */
+    .chatbot-window {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        width: 100%;
+        height: 100%;
+        border-radius: 0;
+        transform-origin: bottom right;
+        z-index: 2000;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .chatbot-header {
+        padding-top: max(1rem, env(safe-area-inset-top));
+    }
+
+    .chatbot-messages {
+        font-size: 1rem;
+    }
+
+    .chatbot-input {
+        padding-bottom: max(1rem, env(safe-area-inset-bottom));
+    }
 }
