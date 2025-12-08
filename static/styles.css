@@ -1133,32 +1133,237 @@ select:focus {
     /* Hide date on very small screens if needed, or keeping it compact */
     #landing-date {
         display: none;
-        /* Hide date on mobile to save space */
-    }
 
-    .landing-footer {
-        position: relative;
-        flex-direction: column;
-        padding: 1.5rem 1rem;
-        margin-top: auto;
-        /* Push to bottom if flex container allows */
-        background: rgba(255, 255, 255, 0.5);
-        /* Subtle background */
-        border-top: 1px solid var(--border);
-        /* Visual separator */
-        width: 100%;
-    }
+        .hero-content .subtitle {
+            font-size: 1.25rem;
+            margin-bottom: 3rem;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
 
-    .landing-copyright {
-        position: static;
-        margin-top: 1rem;
-        text-align: center;
-        width: 100%;
-    }
+        .hero-features {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            flex-wrap: wrap;
+            margin-bottom: 2rem;
+        }
 
-    #weather-widget {
-        min-width: auto;
-        width: 100%;
-        margin-bottom: 0.5rem;
-    }
-}
+        .feature-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .feature-item i {
+            font-size: 2rem;
+            color: var(--primary);
+            background: white;
+            padding: 1rem;
+            border-radius: 50%;
+            box-shadow: var(--shadow-md);
+        }
+
+        .landing-footer {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            /* Spread content */
+            align-items: center;
+            padding: 1rem 2rem;
+            /* Compact vertical padding */
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            font-weight: 500;
+            z-index: 10;
+            backdrop-filter: blur(4px);
+            /* Subtle glass effect */
+        }
+
+        .landing-copyright {
+            font-size: 0.8rem;
+            opacity: 0.8;
+        }
+
+        /* Utilities */
+        .hidden {
+            display: none !important;
+        }
+
+        .nav-actions {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        #landing-date {
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            text-transform: capitalize;
+        }
+
+        .weather-widget {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            font-weight: 500;
+            min-width: 200px;
+            /* Prevent jumping */
+        }
+
+        .weather-content {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .weather-content i {
+            font-size: 1.2rem;
+            color: var(--primary);
+        }
+
+        .weather-city {
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        .weather-temp {
+            color: var(--text-muted);
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+
+        /* Mobile Responsiveness */
+        @media (max-width: 768px) {
+            .landing-hero {
+                padding: 4rem 1rem 2rem 1rem;
+                /* Compact padding */
+                min-height: 100vh;
+                /* Restore full height to center properly */
+                justify-content: center;
+                /* Center vertically */
+                align-items: center;
+                /* Center horizontally */
+                display: flex;
+                flex-direction: column;
+            }
+
+            .hero-content {
+                width: 100%;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                /* Ensure button is centered */
+                margin-bottom: 4rem;
+                /* HUGE gap to push footer down */
+            }
+
+            .hero-content h1 {
+                font-size: 2rem;
+                /* Smaller, cleaner title */
+                margin-bottom: 1rem;
+            }
+
+            .hero-content .subtitle {
+                font-size: 1rem;
+                margin-bottom: 1.5rem;
+                line-height: 1.5;
+            }
+
+            .hero-features {
+                flex-direction: row;
+                /* Horizontal layout again */
+                flex-wrap: wrap;
+                /* Allow wrapping if needed */
+                justify-content: center;
+                gap: 1rem;
+                margin-bottom: 2rem;
+            }
+
+            .feature-item {
+                font-size: 0.85rem;
+                /* Smaller text */
+                width: 30%;
+                /* Fit 3 in a row approx */
+                min-width: 80px;
+            }
+
+            .feature-item i {
+                font-size: 1.5rem;
+                /* Smaller icons */
+                padding: 0.75rem;
+            }
+
+            .landing-nav {
+                padding: 0.75rem 1rem;
+                flex-direction: row;
+                /* Keep nav horizontal if possible, or compact column */
+                flex-wrap: wrap;
+                justify-content: space-between;
+                gap: 0.5rem;
+            }
+
+            .nav-logo {
+                margin-bottom: 0;
+                font-size: 1.1rem;
+            }
+
+            .nav-actions {
+                width: auto;
+                gap: 0.75rem;
+            }
+
+            /* Hide date on very small screens if needed, or keeping it compact */
+            #landing-date {
+                display: none;
+                /* Hide date on mobile to save space */
+            }
+
+            .landing-footer {
+                position: relative;
+                flex-direction: row;
+                /* Horizontal again! */
+                flex-wrap: wrap;
+                /* Allow wrapping if very tight */
+                justify-content: space-between;
+                /* Spread them out */
+                align-items: center;
+                padding: 1rem;
+                margin-top: auto;
+                background: rgba(255, 255, 255, 0.5);
+                border-top: 1px solid var(--border);
+                width: 100%;
+                gap: 0.5rem;
+            }
+
+            .landing-copyright {
+                position: static;
+                margin-top: 0;
+                text-align: right;
+                /* Right align copyright */
+                width: auto;
+                /* Auto width to fit side-by-side */
+                font-size: 0.75rem;
+            }
+
+            #weather-widget {
+                min-width: auto;
+                width: auto;
+                /* Auto width to fit side-by-side */
+                margin-bottom: 0;
+                justify-content: flex-start;
+                /* Align widget content to left */
+            }
+        }
