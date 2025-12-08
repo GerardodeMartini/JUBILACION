@@ -1,4 +1,6 @@
 #!/bin/bash
+echo "Collecting static files..."
+python backend/manage.py collectstatic --noinput
 echo "Running migrations..."
 python backend/manage.py migrate
 echo "Creating superuser..."
