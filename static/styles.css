@@ -858,62 +858,93 @@ select:focus {
 /* Mobile Responsiveness */
 @media (max-width: 768px) {
     .landing-hero {
-        padding: 6rem 1rem 2rem 1rem;
-        /* Reduced bottom padding since footer is relative */
+        padding: 4rem 1rem 2rem 1rem;
+        /* Compact padding */
         min-height: auto;
-        /* Allow content to dictate height */
         justify-content: flex-start;
-        /* Align top on mobile */
     }
 
     .hero-content h1 {
-        font-size: 2.5rem;
+        font-size: 2rem;
+        /* Smaller, cleaner title */
+        margin-bottom: 1rem;
     }
 
     .hero-content .subtitle {
-        font-size: 1.1rem;
-        margin-bottom: 2rem;
+        font-size: 1rem;
+        margin-bottom: 1.5rem;
+        line-height: 1.5;
     }
 
     .hero-features {
-        flex-direction: column;
-        gap: 1.5rem;
+        flex-direction: row;
+        /* Horizontal layout again */
+        flex-wrap: wrap;
+        /* Allow wrapping if needed */
+        justify-content: center;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .feature-item {
+        font-size: 0.85rem;
+        /* Smaller text */
+        width: 30%;
+        /* Fit 3 in a row approx */
+        min-width: 80px;
+    }
+
+    .feature-item i {
+        font-size: 1.5rem;
+        /* Smaller icons */
+        padding: 0.75rem;
     }
 
     .landing-nav {
-        padding: 1rem;
-        flex-direction: column;
+        padding: 0.75rem 1rem;
+        flex-direction: row;
+        /* Keep nav horizontal if possible, or compact column */
+        flex-wrap: wrap;
+        justify-content: space-between;
         gap: 0.5rem;
     }
 
     .nav-logo {
-        margin-bottom: 0.5rem;
+        margin-bottom: 0;
+        font-size: 1.1rem;
     }
 
     .nav-actions {
-        width: 100%;
-        justify-content: center;
-        gap: 1rem;
+        width: auto;
+        gap: 0.75rem;
+    }
+
+    /* Hide date on very small screens if needed, or keeping it compact */
+    #landing-date {
+        display: none;
+        /* Hide date on mobile to save space */
     }
 
     .landing-footer {
         position: relative;
-        /* No longer absolute on mobile */
         flex-direction: column;
-        padding: 1rem;
-        padding-bottom: 2rem;
+        padding: 1.5rem 1rem;
         margin-top: 2rem;
-        /* Give some breathing room from hero */
-        background: transparent;
+        background: rgba(255, 255, 255, 0.5);
+        /* Subtle background */
+        border-top: 1px solid var(--border);
+        /* Visual separator */
     }
 
     .landing-copyright {
         position: static;
-        margin-top: 0.5rem;
+        margin-top: 1rem;
         text-align: center;
+        width: 100%;
     }
 
     #weather-widget {
         min-width: auto;
+        width: 100%;
     }
 }
