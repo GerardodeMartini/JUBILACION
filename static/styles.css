@@ -1051,16 +1051,13 @@ select:focus {
 }
 
 /* Mobile Responsiveness */
+/* Mobile Responsiveness */
 @media (max-width: 768px) {
     .landing-hero {
         padding: 4rem 1rem 2rem 1rem;
-        /* Compact padding */
         min-height: 100vh;
-        /* Restore full height to center properly */
         justify-content: center;
-        /* Center vertically */
         align-items: center;
-        /* Center horizontally */
         display: flex;
         flex-direction: column;
     }
@@ -1070,14 +1067,11 @@ select:focus {
         display: flex;
         flex-direction: column;
         align-items: center;
-        /* Ensure button is centered */
         margin-bottom: 4rem;
-        /* HUGE gap to push footer down */
     }
 
     .hero-content h1 {
         font-size: 2rem;
-        /* Smaller, cleaner title */
         margin-bottom: 1rem;
     }
 
@@ -1089,9 +1083,7 @@ select:focus {
 
     .hero-features {
         flex-direction: row;
-        /* Horizontal layout again */
         flex-wrap: wrap;
-        /* Allow wrapping if needed */
         justify-content: center;
         gap: 1rem;
         margin-bottom: 2rem;
@@ -1099,22 +1091,18 @@ select:focus {
 
     .feature-item {
         font-size: 0.85rem;
-        /* Smaller text */
         width: 30%;
-        /* Fit 3 in a row approx */
         min-width: 80px;
     }
 
     .feature-item i {
         font-size: 1.5rem;
-        /* Smaller icons */
         padding: 0.75rem;
     }
 
     .landing-nav {
         padding: 0.75rem 1rem;
         flex-direction: row;
-        /* Keep nav horizontal if possible, or compact column */
         flex-wrap: wrap;
         justify-content: space-between;
         gap: 0.5rem;
@@ -1130,240 +1118,178 @@ select:focus {
         gap: 0.75rem;
     }
 
-    /* Hide date on very small screens if needed, or keeping it compact */
     #landing-date {
         display: none;
+    }
 
-        .hero-content .subtitle {
-            font-size: 1.25rem;
-            margin-bottom: 3rem;
-            max-width: 600px;
-            margin-left: auto;
-            margin-right: auto;
-        }
+    .landing-footer {
+        position: relative;
+        flex-direction: row;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem;
+        margin-top: auto;
+        background: transparent;
+        border-top: none;
+        width: 100%;
+        gap: 0.5rem;
+    }
 
-        .hero-features {
-            display: flex;
-            justify-content: center;
-            gap: 2rem;
-            flex-wrap: wrap;
-            margin-bottom: 2rem;
-        }
+    .landing-copyright {
+        position: static;
+        margin-top: 0;
+        text-align: right;
+        width: auto;
+        font-size: 0.75rem;
+    }
 
-        .feature-item {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 0.5rem;
-            color: var(--text-muted);
-            font-weight: 500;
-        }
+    #weather-widget {
+        min-width: auto;
+        width: auto;
+        margin-bottom: 0;
+        justify-content: flex-start;
+    }
+}
 
-        .feature-item i {
-            font-size: 2rem;
-            color: var(--primary);
-            background: white;
-            padding: 1rem;
-            border-radius: 50%;
-            box-shadow: var(--shadow-md);
-        }
+/* Resource Section Styles (Global) */
+.resource-section {
+    margin: 2.5rem 0;
+    width: 100%;
+    max-width: 800px;
+}
 
-        .landing-footer {
-            position: absolute;
-            bottom: 0;
-            width: 100%;
-            display: flex;
-            justify-content: space-between;
-            /* Spread content */
-            align-items: center;
-            padding: 1rem 2rem;
-            /* Compact vertical padding */
-            color: var(--text-muted);
-            font-size: 0.9rem;
-            font-weight: 500;
-            z-index: 10;
-            backdrop-filter: blur(4px);
-            /* Subtle glass effect */
-        }
+.resource-section h3 {
+    font-size: 1.1rem;
+    margin-bottom: 1.5rem;
+    color: var(--text-main);
+    font-weight: 600;
+    opacity: 0.9;
+}
 
-        .landing-copyright {
-            font-size: 0.8rem;
-            opacity: 0.8;
-        }
 
-        /* Utilities */
-        .hidden {
-            display: none !important;
-        }
+.resource-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+    /* Increased gap for better separation */
+}
 
-        .nav-actions {
-            display: flex;
-            align-items: center;
-            gap: 1.5rem;
-        }
+/* Premium Button Styles */
+.btn-resource {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.25rem 1.5rem;
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    border-radius: var(--radius-md);
+    color: var(--text-main);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.95rem;
+    line-height: 1.4;
+    /* Better leading for multi-line text */
+    min-height: 80px;
+    /* Ensure consistent height for longer titles */
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+    text-align: left;
+    position: relative;
+    overflow: hidden;
+}
 
-        #landing-date {
-            font-size: 0.9rem;
-            font-weight: 500;
-            color: var(--text-muted);
-            text-transform: capitalize;
-        }
+.btn-resource::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    background: var(--primary);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
 
-        .weather-widget {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.5rem;
-            font-size: 0.9rem;
-            color: var(--text-muted);
-            font-weight: 500;
-            min-width: 200px;
-            /* Prevent jumping */
-        }
+.btn-resource:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    border-color: rgba(79, 70, 229, 0.2);
+    background: #fff;
+}
 
-        .weather-content {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
+.btn-resource:hover::before {
+    opacity: 1;
+}
 
-        .weather-content i {
-            font-size: 1.2rem;
-            color: var(--primary);
-        }
+.btn-resource i {
+    font-size: 1.2rem;
+    color: var(--primary);
+    background: rgba(79, 70, 229, 0.1);
+    padding: 0.5rem;
+    border-radius: 50%;
+    transition: transform 0.3s ease, background 0.3s ease;
+    flex-shrink: 0;
+    /* Prevent icon from shrinking */
+    margin-left: 1rem;
+    /* Clear spacing from text */
+}
 
-        .weather-city {
-            font-weight: 600;
-            color: var(--text-main);
-        }
+.btn-resource:hover i {
+    background: var(--primary);
+    color: white;
+    transform: rotate(-45deg);
+}
 
-        .weather-temp {
-            color: var(--text-muted);
-        }
+/* Contact Section Styles */
+.contact-info-section {
+    margin-top: 3rem;
+    text-align: center;
+    padding-top: 2rem;
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+}
 
-        .fade-in {
-            animation: fadeIn 0.5s ease-in-out;
-        }
+.contact-info-section h4 {
+    font-size: 0.9rem;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    margin-bottom: 1rem;
+    font-weight: 700;
+}
 
-        /* Mobile Responsiveness */
-        @media (max-width: 768px) {
-            .landing-hero {
-                padding: 4rem 1rem 2rem 1rem;
-                /* Compact padding */
-                min-height: 100vh;
-                /* Restore full height to center properly */
-                justify-content: center;
-                /* Center vertically */
-                align-items: center;
-                /* Center horizontally */
-                display: flex;
-                flex-direction: column;
-            }
+.contact-item {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+    color: var(--text-main);
+    font-size: 0.95rem;
+}
 
-            .hero-content {
-                width: 100%;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                /* Ensure button is centered */
-                margin-bottom: 4rem;
-                /* HUGE gap to push footer down */
-            }
+.contact-item i {
+    color: var(--primary);
+    font-size: 1.1rem;
+}
 
-            .hero-content h1 {
-                font-size: 2rem;
-                /* Smaller, cleaner title */
-                margin-bottom: 1rem;
-            }
+.contact-item a {
+    color: var(--primary);
+    text-decoration: none;
+    font-weight: 500;
+}
 
-            .hero-content .subtitle {
-                font-size: 1rem;
-                margin-bottom: 1.5rem;
-                line-height: 1.5;
-            }
+.contact-item a:hover {
+    text-decoration: underline;
+}
 
-            .hero-features {
-                flex-direction: row;
-                /* Horizontal layout again */
-                flex-wrap: wrap;
-                /* Allow wrapping if needed */
-                justify-content: center;
-                gap: 1rem;
-                margin-bottom: 2rem;
-            }
+/* Mobile adjustments for Resource Grid */
+@media (max-width: 768px) {
+    .resource-grid {
+        grid-template-columns: 1fr;
+    }
 
-            .feature-item {
-                font-size: 0.85rem;
-                /* Smaller text */
-                width: 30%;
-                /* Fit 3 in a row approx */
-                min-width: 80px;
-            }
-
-            .feature-item i {
-                font-size: 1.5rem;
-                /* Smaller icons */
-                padding: 0.75rem;
-            }
-
-            .landing-nav {
-                padding: 0.75rem 1rem;
-                flex-direction: row;
-                /* Keep nav horizontal if possible, or compact column */
-                flex-wrap: wrap;
-                justify-content: space-between;
-                gap: 0.5rem;
-            }
-
-            .nav-logo {
-                margin-bottom: 0;
-                font-size: 1.1rem;
-            }
-
-            .nav-actions {
-                width: auto;
-                gap: 0.75rem;
-            }
-
-            /* Hide date on very small screens if needed, or keeping it compact */
-            #landing-date {
-                display: none;
-                /* Hide date on mobile to save space */
-            }
-
-            .landing-footer {
-                position: relative;
-                flex-direction: row;
-                /* Horizontal again! */
-                flex-wrap: wrap;
-                /* Allow wrapping if very tight */
-                justify-content: space-between;
-                /* Spread them out */
-                align-items: center;
-                padding: 1rem;
-                margin-top: auto;
-                background: rgba(255, 255, 255, 0.5);
-                border-top: 1px solid var(--border);
-                width: 100%;
-                gap: 0.5rem;
-            }
-
-            .landing-copyright {
-                position: static;
-                margin-top: 0;
-                text-align: right;
-                /* Right align copyright */
-                width: auto;
-                /* Auto width to fit side-by-side */
-                font-size: 0.75rem;
-            }
-
-            #weather-widget {
-                min-width: auto;
-                width: auto;
-                /* Auto width to fit side-by-side */
-                margin-bottom: 0;
-                justify-content: flex-start;
-                /* Align widget content to left */
-            }
-        }
+    .btn-resource {
+        padding: 1rem;
+        font-size: 0.9rem;
+    }
+}
