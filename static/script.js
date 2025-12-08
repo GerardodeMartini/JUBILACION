@@ -741,6 +741,65 @@ function processUserQuery(query) {
     const normalizedQuery = normalizeString(query);
     const lower = query.toLowerCase().trim();
 
+    // --- PUBLIC MODE (No User Logged In) ---
+    if (!currentUser) {
+        if (lower.includes('hola') || lower.includes('buen')) {
+            return "¡Hola! ¿En qué puedo orientarte hoy?";
+        }
+        if (lower.includes('contacto') || lower.includes('telefono') || lower.includes('mail') || lower.includes('donde estan') || lower.includes('ubicacion')) {
+            return "Estamos en Santa Rosa. Podés llamarnos al 02954-452600 (Interno 1213) o escribir a legajospersonal@lapampa.gob.ar.";
+        }
+        if (lower.includes('ayuda') || lower.includes('que haces')) {
+            return "Soy PILIN. En esta versión pública puedo darte información de contacto. Para buscar agentes o ver estados de trámites, por favor iniciá sesión.";
+        }
+
+        // --- KNOWLEDGE BASE (Public) ---
+
+        // Retiro Especial / Ley 3581
+        if (normalizedQuery.includes('retiro especial') || normalizedQuery.includes('ley 3581') || normalizedQuery.includes('3581')) {
+            return `**Retiro Especial (Ley N° 3581):**<br><br>
+            Es para agentes que aún no tienen edad/aportes para la ordinaria. Se retiran con un % del sueldo (aprox. 60%) y siguen aportando hasta cumplir la edad legal.<br><br>
+            **Requisitos:**<br>
+            • Mujeres 55 años / Varones 60 años.<br>
+            • 30 años de aportes (mínimo 20 en ISS La Pampa).<br>
+            • Vigencia hasta 31/12/2027.<br><br>
+            <a href="https://dgp.lapampa.gob.ar/jubilaciones-especiales" target="_blank" style="color: var(--primary); text-decoration: underline;">Más información aquí</a>`;
+        }
+
+        // Jubilación por ANSES
+        if (normalizedQuery.includes('anses')) {
+            return `**Jubilación por ANSES:**<br><br>
+            Corresponde a quienes aportaron a la Caja Nacional. Requisito: 30 años de aportes y 60/65 años de edad.<br><br>
+            **Diferencia Clave:** Si tenés aportes en ISS y ANSES, se jubila por la "Caja Otorgante" (donde tengas más años). Al obtener este beneficio, cesa la relación de empleo provincial.<br><br>
+            <a href="https://dgp.lapampa.gob.ar/jubilacion-por-anses" target="_blank" style="color: var(--primary); text-decoration: underline;">Más información aquí</a>`;
+        }
+
+        // Suplemento Especial Vitalicio / Invalidez
+        if (normalizedQuery.includes('suplemento') || normalizedQuery.includes('vitalicio') || normalizedQuery.includes('invalidez')) {
+            return `**Suplemento Especial Vitalicio:**<br><br>
+            Beneficio para agentes que ingresaron tarde a planta y no llegan a los 30 años de aportes. El Estado paga un plus para completar el haber.<br><br>
+            **Destinado a:** Ingresantes al ISS entre 2004-2007 o ex Ley 2343.<br>
+            **Requisitos:** 60/65 años de edad, 10 años de aportes al ISS y **no tener otra jubilación**.<br><br>
+            <a href="https://dgp.lapampa.gob.ar/jubilacion-anticipada" target="_blank" style="color: var(--primary); text-decoration: underline;">Más información aquí</a>`;
+        }
+
+        // Jubilación Ordinaria
+        if (normalizedQuery.includes('ordinaria')) {
+            return `**Jubilación Ordinaria:**<br><br>
+            Es el beneficio estándar al completar la carrera laboral.<br><br>
+            **Requisitos:**<br>
+            • Edad: 60 (mujeres) / 65 (hombres).<br>
+            • Aportes: 30 años computables.<br>
+            • **Caja Otorgante:** Mayor cantidad de aportes en ISS La Pampa (o 10 años mínimo si es la última).<br><br>
+            <a href="https://dgp.lapampa.gob.ar/jubilacion-ordinaria" target="_blank" style="color: var(--primary); text-decoration: underline;">Más información aquí</a>`;
+        }
+
+        // Catch-all for data queries in public mode
+        return "Para buscar personas, DNI o ver estados de trámites, necesitás **iniciar sesión**. Por seguridad, no puedo mostrar datos privados aquí.<br><br>Podés preguntarme sobre: *Ordinaria, Retiro Especial, ANSES o Suplemento Vitalicio*.";
+    }
+
+    // --- PRIVATE MODE (Dashboard) ---
+
     // Command: Reset/Clean
     if (lower.includes('reset') || lower.includes('limpiar') || lower.includes('todos') || lower.includes('borrar') || lower.includes('inicio') || lower.includes('volver') || lower.includes('lista') || lower.includes('original')) {
         loadAgents();
@@ -971,3 +1030,26 @@ window.loadAgents = loadAgents;
 window.toggleChatbot = toggleChatbot;
 window.handleChatInput = handleChatInput;
 window.sendMessage = sendMessage;
+
+// Explicitly expose functions to window since this is a module
+window.toggleChatbot = toggleChatbot;
+window.handleChatInput = handleChatInput;
+window.sendMessage = sendMessage;
+window.handleLogin = handleLogin;
+window.handleRegister = handleRegister;
+window.handleManualAdd = handleManualAdd;
+// Also expose others used in HTML
+
+window.loadAgents = loadAgents;
+window.openModal = openModal;
+window.closeModal = closeModal;
+window.openUploadModal = openUploadModal;
+window.closeUploadModal = closeUploadModal;
+window.openDetailsModal = openDetailsModal;
+window.closeDetailsModal = closeDetailsModal;
+window.clearAllData = clearAllData;
+window.filterByStatus = function (status) {
+    const filtered = globalAgents.filter(a => a.status.code === status);
+    renderFilteredAgents(filtered);
+};
+
