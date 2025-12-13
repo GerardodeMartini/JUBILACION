@@ -30,7 +30,7 @@ SECRET_KEY = config('SECRET_KEY', default='django-insecure-dev-key-change-me-in-
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', default=False, cast=bool)
 
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='127.0.0.1,localhost').split(',')
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='127.0.0.1,localhost').split(',') + ['gdemar.com.ar', 'www.gdemar.com.ar']
 
 
 # Application definition
@@ -141,6 +141,7 @@ STATICFILES_DIRS = [
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
 
 # CORS
+
 # CORS
 if DEBUG:
     CORS_ALLOW_ALL_ORIGINS = True
@@ -148,6 +149,8 @@ else:
     CORS_ALLOW_ALL_ORIGINS = False
     CORS_ALLOWED_ORIGIN_REGEXES = [
         r"^https://\w+\.up\.railway\.app$",
+        r"^https://gdemar\.com\.ar$",
+        r"^https://www\.gdemar\.com\.ar$",
     ]
 
 # Security Headers (Production)
@@ -173,7 +176,11 @@ REST_FRAMEWORK = {
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-CSRF_TRUSTED_ORIGINS = ['https://*.up.railway.app']
+CSRF_TRUSTED_ORIGINS = [
+    'https://*.up.railway.app',
+    'https://gdemar.com.ar',
+    'https://www.gdemar.com.ar'
+]
 
 from datetime import timedelta
 SIMPLE_JWT = {
