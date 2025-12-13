@@ -27,7 +27,7 @@ class Agent(models.Model):
     location = models.CharField(max_length=255, blank=True, null=True) # Ubicacion
     branch = models.CharField(max_length=255, blank=True, null=True)   # Rama
     cuil = models.CharField(max_length=50, blank=True, null=True, db_index=True)      # CUIL
-    dni = models.CharField(max_length=20, blank=True, null=True, db_index=True, unique=True)       # DNI
+    dni = models.CharField(max_length=20, blank=True, null=True, db_index=True)       # DNI
     seniority = models.CharField(max_length=50, blank=True, null=True) # Antiguedad
     created_at = models.DateTimeField(auto_now_add=True)
 
