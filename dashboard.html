@@ -5,6 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestión de Jubilaciones - Dashboard</title>
+    <link rel="icon" type="image/svg+xml"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%232563eb'><path d='M20,3H4A2.2,2.2,0,0,0,1.8,5.2V18.8A2.2,2.2,0,0,0,4,21H20a2.2,2.2,0,0,0,2.2-2.2V5.2A2.2,2.2,0,0,0,20,3ZM4,19V5H20V19Z'/></svg>">
 
     <!-- Google Fonts: Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -20,13 +22,10 @@
 
     <link rel="stylesheet" href="/static/styles.css">
     <script type="module" src="/static/script.js?v=17"></script>
-
-
 </head>
 
 <body>
     <div class="app-container">
-
         <!-- Main App -->
         <div id="main-app">
             <header class="app-header">
@@ -56,8 +55,8 @@
                                 <button class="btn-secondary small" onclick="openUploadModal()">
                                     <i class="ph ph-microsoft-excel-logo"></i> Importar Excel
                                 </button>
-                                <button class="btn-secondary small" onclick="loadAgents()">
-                                    <i class="ph ph-arrow-counter-clockwise"></i> Volver a Lista
+                                <button class="btn-secondary small" onclick="showAllAgents()">
+                                    <i class="ph ph-list"></i> Ver Todos
                                 </button>
                                 <button class="btn-secondary small" onclick="clearAllData()">
                                     <i class="ph ph-trash"></i> Borrar Todo
@@ -65,8 +64,7 @@
                             </div>
                         </div>
                         <div class="stats-container">
-                            <div class="stat-card" data-type="total" onclick="loadAgents()" style="cursor: pointer;"
-                                title="Ver todos">
+                            <div class="stat-card" data-type="total" title="Total de Agentes cargados">
                                 <span class="stat-label">Total Agentes</span>
                                 <span class="stat-value" id="total-count">0</span>
                             </div>
@@ -75,10 +73,15 @@
                                 <span class="stat-label">Vencidos</span>
                                 <span class="stat-value" id="vencido-count">0</span>
                             </div>
-                            <div class="stat-card warning" data-type="proximo" onclick="filterByStatus('proximo')"
+                            <div class="stat-card info" data-type="proximo" onclick="filterByStatus('proximo')"
                                 style="cursor: pointer;" title="Filtrar Próximos">
-                                <span class="stat-label">Próximos (2 años)</span>
+                                <span class="stat-label">Próximos (1 año)</span>
                                 <span class="stat-value" id="proximo-count">0</span>
+                            </div>
+                            <div class="stat-card warning" data-type="inminente" onclick="filterByStatus('inminente')"
+                                style="cursor: pointer;" title="Filtrar Inminentes">
+                                <span class="stat-label">Inminente (< 6 meses)</span>
+                                        <span class="stat-value" id="inminente-count">0</span>
                             </div>
                         </div>
                     </div>
@@ -101,6 +104,18 @@
                                 <!-- Rows will be added here -->
                             </tbody>
                         </table>
+                    </div>
+
+                    <!-- Pagination Controls -->
+                    <div class="pagination-container"
+                        style="display: flex; justify-content: center; align-items: center; gap: 1rem; margin-top: 1rem;">
+                        <button id="prev-page" class="btn-secondary small" onclick="prevPage()" disabled>
+                            <i class="ph ph-caret-left"></i> Anterior
+                        </button>
+                        <span id="page-info" style="font-size: 0.9rem; color: var(--text-light);">Página 1</span>
+                        <button id="next-page" class="btn-secondary small" onclick="nextPage()" disabled>
+                            Siguiente <i class="ph ph-caret-right"></i>
+                        </button>
                     </div>
                 </section>
             </main>

@@ -1,12 +1,26 @@
 // Constants
 const RETIREMENT_AGE_FEMALE = 60;
 const RETIREMENT_AGE_MALE = 65;
-const API_URL = window.location.origin + '/api';
+// Helper to determine API URL based on environment
+const getApiUrl = () => {
+    const host = window.location.hostname;
+    const port = window.location.port;
+    if ((host === 'localhost' || host === '127.0.0.1') && port !== '8000') {
+        return `http://${host}:8000/api`;
+    }
+    return window.location.origin + '/api';
+};
+const API_URL = getApiUrl();
+console.log('Jubilacion API_URL:', API_URL);
 
 // State
 let globalAgents = [];
 let currentUser = null;
 let token = localStorage.getItem('auth_token');
+let nextPageUrl = null;
+let prevPageUrl = null;
+let currentPage = 1;
+let currentStatusFilter = null;
 
 // DOM Elements
 let dropZone;
@@ -14,6 +28,7 @@ let fileInput;
 let uploadSection;
 let dashboardSection;
 let tableBody;
+
 let modal;
 let authSection;
 let mainApp;
@@ -101,7 +116,6 @@ window.addEventListener('DOMContentLoaded', () => {
 // --- Auth Functions ---
 
 function toggleAuthMode() {
-    // Deprecated: Pages are now separate
     console.warn('toggleAuthMode is deprecated');
 }
 
@@ -203,7 +217,7 @@ function getRetirementStatus(retirementDate) {
 
     if (diffDays < 0) return { code: 'vencido', label: 'VENCIDO' };
     if (diffDays < 180) return { code: 'inminente', label: 'INMINENTE (< 6 meses)' };
-    if (diffYears < 2) return { code: 'proximo', label: 'PRÓXIMO (< 2 años)' };
+    if (diffYears < 1) return { code: 'proximo', label: 'PRÓXIMO (< 1 año)' };
     return { code: 'lejos', label: 'LEJOS' };
 }
 
@@ -226,6 +240,7 @@ function handleFileSelect(e) {
     e.target.value = '';
 }
 
+
 function processFile(file) {
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -233,119 +248,178 @@ function processFile(file) {
         const workbook = XLSX.read(data, { type: 'array' });
         const firstSheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[firstSheetName];
-        const jsonData = XLSX.utils.sheet_to_json(worksheet);
+        // Use header: 1 to get array of arrays (index-based)
+        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
         analyzeData(jsonData);
     };
     reader.readAsArrayBuffer(file);
 }
 
 async function analyzeData(data) {
-    if (!data || data.length === 0) {
-        alert('El archivo parece estar vacío.');
+    if (!data || data.length < 2) {
+        alert('El archivo parece estar vacío o no tiene datos.');
         return;
     }
 
-    const getValue = (row, possibleKeys) => {
-        const rowKeys = Object.keys(row);
-        const normalizedRowKeys = rowKeys.map(k => k.toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, ""));
+    // Row 0 is headers
+    // Using simple mapping to normalize headers for dynamic search
+    const headers = data[0].map(h => String(h).toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, ""));
+    const rows = data.slice(1);
 
+    // Helper to find column index by header name
+    const findCol = (possibleKeys) => {
         for (const key of possibleKeys) {
             const normalizedKey = key.toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-            const index = normalizedRowKeys.indexOf(normalizedKey);
-            if (index !== -1) return row[rowKeys[index]];
+            const index = headers.findIndex(h => h === normalizedKey);
+            if (index !== -1) return index;
         }
-        return null;
+        return -1;
     };
+
+    // Detect indices for dynamic fields
+    const idxName = findCol(['Nombre', 'Nombres', 'Name']);
+    const idxSurname = findCol(['Apellido', 'Apellidos', 'Surname']);
+    const idxFullName = findCol(['Nombre Completo', 'Agente']);
+
+    // Gender
+    const idxGender = findCol(['Genero', 'Género', 'Sexo', 'Sex', 'Gender']);
+
+    // Dates
+    const idxBirth = findCol(['Fecha Nacimiento', 'Fecha de Nacimiento', 'F. Nac', 'Nacimiento', 'Birth Date']);
+    const idxAge = findCol(['Edad', 'Age', 'Años']);
+
+    // Seniority
+    const idxSeniority = findCol(['Antig Total Años']);
+
+    // CUIL
+    const idxCuil = findCol(['CUIL', 'Cuil', 'C.U.I.L.']);
+
+    // Indices FIXED by user specification (0-based)
+    // C = 2 (DNI)
+    // E = 4 (Ley)
+    // H = 7 (Afiliado) -> Confirmed Working by User
+    // L = 11 (Jurisdiccion Code)
+    // M = 12 (Nombre Jurisdiccion)
+
+    const IDX_DNI = 2;
+    const IDX_LEY = 4;
+    const IDX_AFILIADO = 7;
+    const IDX_JURIS_CODE = 11;
+    const IDX_JURIS_NAME = 12;
 
     let agentsToUpload = [];
 
-    for (const row of data) {
-        let name = getValue(row, ['Nombre', 'Nombres', 'Name']) || '';
-        let surname = getValue(row, ['Apellido', 'Apellidos', 'Surname']) || '';
+    for (const row of rows) {
+        if (!row || row.length === 0) continue;
+
+        // --- Name & Surname ---
+        let name = (idxName !== -1 && row[idxName]) ? row[idxName] : '';
+        let surname = (idxSurname !== -1 && row[idxSurname]) ? row[idxSurname] : '';
 
         if (!name && !surname) {
-            const full = getValue(row, ['Nombre Completo', 'Agente']) || 'Desconocido';
+            const full = (idxFullName !== -1 && row[idxFullName]) ? row[idxFullName] : 'Desconocido';
             name = full;
         }
 
-        name = capitalize(name);
-        surname = capitalize(surname);
-        // Format: Surname Name
+        name = capitalize(String(name));
+        surname = capitalize(String(surname));
         const fullName = `${surname} ${name}`.trim();
 
-        const genderRaw = getValue(row, ['Genero', 'Género', 'Sexo', 'Sex', 'Gender']) || 'M';
+        // --- Gender ---
+        const genderRaw = (idxGender !== -1 && row[idxGender]) ? row[idxGender] : 'M';
         const genderUpper = String(genderRaw).toUpperCase().trim();
         const gender = (genderUpper.startsWith('F') || genderUpper.startsWith('M')) ? genderUpper.charAt(0) : 'M';
 
-        let birthDateRaw = getValue(row, ['Fecha Nacimiento', 'Fecha de Nacimiento', 'F. Nac', 'Nacimiento', 'Birth Date']);
-        let ageRaw = getValue(row, ['Edad', 'Age', 'Años']);
+        // --- Birth Date ---
+        let birthDateRaw = (idxBirth !== -1) ? row[idxBirth] : null;
+        let ageRaw = (idxAge !== -1) ? row[idxAge] : null;
 
-        // New fields
-        const agreement = getValue(row, ['Convenio', 'Agreement']) || '';
-        const law = getValue(row, ['Unnamed: 3', 'E1', 'Ley', 'Law']) || '';
-        const affiliateStatus = getValue(row, ['Afiliado', 'Affiliate', 'Estado Afiliado']) || '';
+        // --- STRICT MAPPED COLUMNS (User Request) ---
 
-        // Jurisdiction parsing (L1 : Unnamed: 11)
-        const jurisCode = getValue(row, ['L1', 'Jurisdiccion', 'Jurisdicción']) || '';
-        const jurisDesc = getValue(row, ['Unnamed: 11', 'Jurisdiccion Descripcion']) || '';
+        // DNI (Col C -> Index 2)
+        // Debugging: If DNI is missing at C, check neighbors B(1) or D(3)
+        let dniVal = (row[IDX_DNI] !== undefined) ? row[IDX_DNI] : null;
 
-        // Fallback to old 'Ministerio' if L1 is missing, otherwise format as requested
-        let ministry = getValue(row, ['Ministerio', 'Ministry', 'Repartición']) || '';
-        if (jurisCode || jurisDesc) {
-            ministry = `${jurisCode} - ${jurisDesc}`.trim();
-            if (ministry === '-') ministry = ''; // Clean up if both empty
+        // If empty, try fallback to dynamic search or neighbors
+        if (!dniVal || dniVal === '-') {
+            // Try explicit neighbors just in case
+            if (row[3] && String(row[3]).match(/^\d+$/)) dniVal = row[3]; // Check Col D (3)
+            else if (row[1] && String(row[1]).match(/^\d+$/)) dniVal = row[1]; // Check Col B (1)
+            // Try searching further right if shifted
+            else if (row[4] && String(row[4]).match(/^\d{7,8}$/)) dniVal = row[4]; // Check Col E (4)
+            else dniVal = '-';
         }
 
-        // --- New Fields Parsing ---
-
-        // Ubicacion: User indicated 'Unnamed: 15' is the description (LICENCIAS)
-        const locationDesc = getValue(row, ['Unnamed: 15', 'Ubicacion Descripcion']) || '';
-        const locationCode = getValue(row, ['Ubicacion', 'Location', 'U1']) || '';
-        const locationVal = locationDesc || locationCode;
-
-        // Rama: Code (Rama) + Description (Unnamed: 21)
-        const branchCode = getValue(row, ['Rama', 'Branch', 'RamCod']) || '';
-        const branchDesc = getValue(row, ['Unnamed: 21', 'Rama Descripcion']) || '';
-        let branchVal = branchDesc;
-        if (branchCode && branchDesc) {
-            branchVal = `${branchCode} - ${branchDesc}`;
-        } else if (branchCode) {
-            branchVal = branchCode;
-        }
-
-        // CUIL: Found 'CUIL'
-        const cuilVal = getValue(row, ['CUIL', 'Cuil', 'C.U.I.L.']) || '';
-
-        // DNI: Column D (DNI or D1) - Prioritize explicit column D
-        let dniVal = getValue(row, ['DNI', 'D1', 'Documento', 'Unnamed: 3']) || '-';
         if (dniVal && dniVal !== '-') {
-            // Clean up DNI (remove dots, just keep numbers)
-            dniVal = dniVal.toString().replace(/\./g, '').trim();
+            dniVal = String(dniVal).replace(/\./g, '').trim();
         }
 
-        // Antiguedad: User confirmed 'Antig Total Años'
-        // STRICTLY forcing this column to avoid 'Antig Rec Años'
-        const seniorityVal = getValue(row, ['Antig Total Años']) || '-';
-        // console.log(`Row ${index}: Seniority = ${seniorityVal}`);
+        // Ley (Col E -> Index 4)
+        const law = (row[IDX_LEY] !== undefined) ? String(row[IDX_LEY]).trim() : '';
+
+        // Afiliado (Col H -> Index 7)
+        const affiliateStatus = (row[IDX_AFILIADO] !== undefined) ? String(row[IDX_AFILIADO]).trim() : '';
+
+        // Jurisdicción (Col L + M -> Index 11 + 12)
+        // Check also L+1 or L-1 if shifted
+        const jurisCode = (row[IDX_JURIS_CODE] !== undefined) ? String(row[IDX_JURIS_CODE]).trim() : '';
+        const jurisName = (row[IDX_JURIS_NAME] !== undefined) ? String(row[IDX_JURIS_NAME]).trim() : '';
+
+        let actualJurisName = jurisName;
+        if ((!actualJurisName || actualJurisName === '-') && row[13]) {
+            actualJurisName = row[13]; // Check M+1 (13)
+        }
+
+        let ministry = '';
+        if (jurisCode || actualJurisName) {
+            ministry = `${jurisCode} - ${actualJurisName}`.trim();
+            if (ministry === '-') ministry = '';
+        }
+
+        // --- Other Fields (Dynamic or Fallback) ---
+
+        let agreement = '';
+        const idxAgreement = findCol(['Convenio', 'Agreement']);
+        if (idxAgreement !== -1) agreement = row[idxAgreement] || '';
+
+        // Ubicacion
+        const idxLocDesc = findCol(['Unnamed: 15', 'Ubicacion Descripcion']);
+        const idxLocCode = findCol(['Ubicacion', 'Location', 'U1']);
+        let locationVal = '';
+        if (idxLocDesc !== -1 && row[idxLocDesc]) locationVal = row[idxLocDesc];
+        else if (idxLocCode !== -1 && row[idxLocCode]) locationVal = row[idxLocCode];
+
+        // Rama
+        const idxBranchCode = findCol(['Rama', 'Branch', 'RamCod']);
+        const idxBranchDesc = findCol(['Unnamed: 21', 'Rama Descripcion']);
+        let branchVal = '';
+        const bCode = (idxBranchCode !== -1 && row[idxBranchCode]) ? row[idxBranchCode] : '';
+        const bDesc = (idxBranchDesc !== -1 && row[idxBranchDesc]) ? row[idxBranchDesc] : '';
+        if (bCode && bDesc) branchVal = `${bCode} - ${bDesc}`;
+        else branchVal = bDesc || bCode;
+
+        // CUIL
+        const cuilVal = (idxCuil !== -1 && row[idxCuil]) ? row[idxCuil] : '';
+
+        // Antiguedad
+        const seniorityVal = (idxSeniority !== -1 && row[idxSeniority]) ? row[idxSeniority] : '-';
 
         let birthDate = null;
-
         if (birthDateRaw) {
             if (typeof birthDateRaw === 'number') {
                 birthDate = new Date(Math.round((birthDateRaw - 25569) * 86400 * 1000));
             } else {
-                if (typeof birthDateRaw === 'string' && birthDateRaw.includes('/')) {
-                    const parts = birthDateRaw.split('/');
+                const s = String(birthDateRaw);
+                if (s.includes('/')) {
+                    const parts = s.split('/');
                     if (parts.length === 3) {
                         birthDate = new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
-                    } else {
-                        birthDate = new Date(birthDateRaw);
                     }
                 } else {
-                    birthDate = new Date(birthDateRaw);
+                    birthDate = new Date(s);
                 }
             }
-        } else if (ageRaw !== null && ageRaw !== undefined) {
+        } else if (ageRaw) {
             const age = parseInt(ageRaw, 10);
             if (!isNaN(age)) {
                 const today = new Date();
@@ -353,9 +427,7 @@ async function analyzeData(data) {
             }
         }
 
-        if (birthDate && isNaN(birthDate.getTime())) {
-            birthDate = null;
-        }
+        if (birthDate && isNaN(birthDate.getTime())) birthDate = null;
 
         let retirementDate = null;
         let status = { code: 'lejos', label: '' };
@@ -385,6 +457,7 @@ async function analyzeData(data) {
             seniority: seniorityVal
         });
     }
+
 
     if (agentsToUpload.length > 0) {
         try {
@@ -417,14 +490,50 @@ async function analyzeData(data) {
 
 // --- Persistence (API) ---
 
-async function loadAgents() {
+async function loadAgents(url = null) {
+    let fetchUrl;
+
+    if (url) {
+        // Pagination case: URL provided by DRF (absolute)
+        // We only want the query parameters to avoid Origin/Host mismatch issues
+        try {
+            const urlObj = new URL(url);
+            // Construct cleaner URL using our trusted API_URL
+            fetchUrl = `${API_URL}/agents/${urlObj.search}`;
+        } catch (e) {
+            console.warn('Invalid pagination URL, using base:', url);
+            fetchUrl = `${API_URL}/agents/`;
+        }
+    } else {
+        // Initial load or filter change
+        fetchUrl = `${API_URL}/agents/`;
+        if (currentStatusFilter) {
+            fetchUrl += `?status=${currentStatusFilter}`;
+        }
+    }
+
     try {
-        const res = await fetch(`${API_URL}/agents/`, {
+        const res = await fetch(fetchUrl, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         if (res.ok) {
             const data = await res.json();
-            globalAgents = data.map(a => ({
+            const agentsList = data.results || data;
+
+            // Pagination state
+            nextPageUrl = data.next;
+            prevPageUrl = data.previous;
+
+            // Update UI Controls
+            const prevBtn = document.getElementById('prev-page');
+            const nextBtn = document.getElementById('next-page');
+            const pageInfo = document.getElementById('page-info');
+
+            if (prevBtn) prevBtn.disabled = !prevPageUrl;
+            if (nextBtn) nextBtn.disabled = !nextPageUrl;
+            if (pageInfo) pageInfo.textContent = `Página ${currentPage}`;
+
+            globalAgents = agentsList.map(a => ({
                 id: a.id,
                 fullName: a.full_name,
                 birthDate: a.birth_date,
@@ -434,7 +543,7 @@ async function loadAgents() {
                 age: a.birth_date ? calculateAge(new Date(a.birth_date)) : null,
                 agreement: a.agreement,
                 law: a.law,
-                affiliateStatus: a.affiliate_status,
+                affiliate_status: a.affiliate_status,
                 ministry: a.ministry,
                 location: a.location,
                 branch: a.branch,
@@ -445,10 +554,12 @@ async function loadAgents() {
             sortAgents();
 
             if (globalAgents.length === 0) {
-                // Show dashboard anyway so user can add agents
                 console.log('No agents found');
             }
+
+            // Render what we received (already filtered by backend)
             renderDashboard();
+
         } else if (res.status === 401 || res.status === 403) {
             logout();
         }
@@ -458,13 +569,30 @@ async function loadAgents() {
     }
 }
 
-async function clearAllData() {
-    if (confirm('¿Estás seguro de que quieres borrar todos los agentes visibles?')) {
-        for (const agent of globalAgents) {
-            await deleteAgent(agent.id, false);
-        }
-        loadAgents();
+function nextPage() {
+    if (nextPageUrl) {
+        currentPage++;
+        loadAgents(nextPageUrl);
     }
+}
+
+function prevPage() {
+    if (prevPageUrl) {
+        currentPage--;
+        loadAgents(prevPageUrl);
+    }
+}
+
+function filterByStatus(statusCode) {
+    currentStatusFilter = statusCode;
+    currentPage = 1; // Reset to page 1 on new filter
+    loadAgents();
+}
+
+function showAllAgents() {
+    currentStatusFilter = null;
+    currentPage = 1;
+    loadAgents();
 }
 
 function updateStats() {
@@ -479,7 +607,13 @@ function updateStats() {
     const vencidos = globalAgents.filter(a => a.status.code === 'vencido').length;
     vencidoCount.textContent = vencidos;
 
-    const proximos = globalAgents.filter(a => a.status.code === 'proximo' || a.status.code === 'inminente').length;
+    const inminenteCount = document.getElementById('inminente-count');
+    if (inminenteCount) {
+        const inminentes = globalAgents.filter(a => a.status.code === 'inminente').length;
+        inminenteCount.textContent = inminentes;
+    }
+
+    const proximos = globalAgents.filter(a => a.status.code === 'proximo').length;
     proximoCount.textContent = proximos;
 }
 
@@ -539,6 +673,29 @@ function renderDashboard() {
         `;
         tableBody.appendChild(row);
     });
+}
+
+async function clearAllData() {
+    if (confirm('¿Estás seguro de que querés borrar TODOS los agentes? Esta acción no se puede deshacer.')) {
+        try {
+            const res = await fetch(`${API_URL}/agents/delete_all/`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (res.ok) {
+                const data = await res.json();
+                alert(data.message);
+                loadAgents();
+            } else {
+                const data = await res.json();
+                alert(`Error: ${data.error}`);
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Error al borrar los datos.');
+        }
+    }
 }
 
 async function deleteAgent(id, reload = true) {
@@ -665,7 +822,7 @@ function openDetailsModal(id) {
     setVal('detail-branch', agent.branch);
     setVal('detail-agreement', agent.agreement);
     setVal('detail-law', agent.law);
-    setVal('detail-affiliate', agent.affiliateStatus);
+    setVal('detail-affiliate', agent.affiliate_status); // Updated from affiliateStatus
     setVal('detail-seniority', agent.seniority ? agent.seniority + ' años' : '-');
 
     const statusEl = document.getElementById('detail-status');
@@ -816,14 +973,14 @@ function processUserQuery(query) {
         const found = globalAgents.filter(a => {
             const dniMatch = a.dni && a.dni.toString().includes(numStr);
             // Check affiliateStatus. Sometimes it is mixed text, so we check if it includes the number
-            const affMatch = a.affiliateStatus && a.affiliateStatus.toString().includes(numStr);
+            const affMatch = a.affiliate_status && a.affiliate_status.toString().includes(numStr);
             return dniMatch || affMatch;
         });
 
         if (found.length === 1) {
             const agent = found[0];
             const isDni = agent.dni && agent.dni.toString().includes(numStr);
-            const isAff = agent.affiliateStatus && agent.affiliateStatus.toString().includes(numStr);
+            const isAff = agent.affiliate_status && agent.affiliate_status.toString().includes(numStr);
 
             let reason = "";
             if (isDni && isAff) reason = "por DNI y Nro. de Afiliado";
@@ -1001,11 +1158,7 @@ function renderFilteredAgents(filteredList) {
     });
 }
 
-// Filter by Status Code (clicked from cards)
-function filterByStatus(code) {
-    const filtered = globalAgents.filter(a => a.status.code === code);
-    renderFilteredAgents(filtered);
-}
+
 
 // --- Expose to Window ---
 window.handleFileSelect = handleFileSelect;
@@ -1031,25 +1184,6 @@ window.toggleChatbot = toggleChatbot;
 window.handleChatInput = handleChatInput;
 window.sendMessage = sendMessage;
 
-// Explicitly expose functions to window since this is a module
-window.toggleChatbot = toggleChatbot;
-window.handleChatInput = handleChatInput;
-window.sendMessage = sendMessage;
-window.handleLogin = handleLogin;
-window.handleRegister = handleRegister;
-window.handleManualAdd = handleManualAdd;
-// Also expose others used in HTML
-
-window.loadAgents = loadAgents;
-window.openModal = openModal;
-window.closeModal = closeModal;
-window.openUploadModal = openUploadModal;
-window.closeUploadModal = closeUploadModal;
-window.openDetailsModal = openDetailsModal;
-window.closeDetailsModal = closeDetailsModal;
-window.clearAllData = clearAllData;
-window.filterByStatus = function (status) {
-    const filtered = globalAgents.filter(a => a.status.code === status);
-    renderFilteredAgents(filtered);
-};
-
+window.showAllAgents = showAllAgents;
+window.nextPage = nextPage;
+window.prevPage = prevPage;

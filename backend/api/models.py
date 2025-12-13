@@ -15,7 +15,7 @@ class Agent(models.Model):
     # But I need to import uuid.
     
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='agents')
-    full_name = models.CharField(max_length=255)
+    full_name = models.CharField(max_length=255, db_index=True)
     birth_date = models.DateField(null=True, blank=True)
     gender = models.CharField(max_length=10)
     retirement_date = models.DateField(null=True, blank=True)
@@ -26,8 +26,8 @@ class Agent(models.Model):
     ministry = models.CharField(max_length=255, blank=True, null=True)
     location = models.CharField(max_length=255, blank=True, null=True) # Ubicacion
     branch = models.CharField(max_length=255, blank=True, null=True)   # Rama
-    cuil = models.CharField(max_length=50, blank=True, null=True)      # CUIL
-    dni = models.CharField(max_length=20, blank=True, null=True)       # DNI
+    cuil = models.CharField(max_length=50, blank=True, null=True, db_index=True)      # CUIL
+    dni = models.CharField(max_length=20, blank=True, null=True, db_index=True)       # DNI
     seniority = models.CharField(max_length=50, blank=True, null=True) # Antiguedad
     created_at = models.DateTimeField(auto_now_add=True)
 

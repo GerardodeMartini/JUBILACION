@@ -1,6 +1,10 @@
+from typing import Any, Dict
+from django.db.models import QuerySet
 from rest_framework import viewsets, permissions, status, generics
+from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.db import transaction
@@ -9,11 +13,20 @@ from .serializers import UserSerializer, AgentSerializer
 
 # Custom Token Serializer to include user info in response
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
-    def validate(self, attrs):
+    def validate(self, attrs: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Validates the token request and adds custom claims (username, role).
+
+        Args:
+            attrs (Dict[str, Any]): The validation attributes.
+
+        Returns:
+            Dict[str, Any]: Validated data with custom claims.
+        """
         data = super().validate(attrs)
         data['token'] = data.pop('access')
-        data['username'] = self.user.username
-        data['role'] = self.user.role
+        data['username'] = self.user.username  # type: ignore
+        data['role'] = self.user.role  # type: ignore
         return data
 
 class CustomTokenObtainPairView(TokenObtainPairView):
@@ -25,11 +38,19 @@ class RegisterView(generics.CreateAPIView):
     permission_classes = (permissions.AllowAny,)
     serializer_class = UserSerializer
 
-    def create(self, request, *args, **kwargs):
+    def create(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        """
+        Creates a new user instance.
+
+        Args:
+            request (Request): The HTTP request containing user data.
+
+        Returns:
+            Response: The created user data or an error message.
+        """
         try:
             return super().create(request, *args, **kwargs)
         except Exception as e:
-            # Log the error for debugging (print to stdout for Railway logs)
             import traceback
             traceback.print_exc()
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -38,17 +59,32 @@ class AgentViewSet(viewsets.ModelViewSet):
     serializer_class = AgentSerializer
     permission_classes = [permissions.IsAuthenticated]
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet:
+        """
+        Returns the list of agents belonging to the current user.
+        """
         user = self.request.user
-        if user.role == 'admin':
-            return Agent.objects.all()
-        return Agent.objects.filter(user=user)
+        queryset = Agent.objects.filter(user=user).select_related('user')
+        
+        status_param = self.request.query_params.get('status')
+        if status_param:
+            queryset = queryset.filter(status__code=status_param)
+            
+        return queryset
 
-    def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
 
     @action(detail=False, methods=['post'])
-    def bulk(self, request):
+    def bulk(self, request: Request) -> Response:
+        """
+        Bulk creates agents from a list of data.
+        Handles manual mapping of keys (camelCase -> snake_case).
+
+        Args:
+            request (Request): HTTP request containing a list of agent objects.
+
+        Returns:
+            Response: Success message or error.
+        """
         agents_data = request.data
         if not isinstance(agents_data, list):
             return Response({'error': 'Expected a list of agents'}, status=status.HTTP_400_BAD_REQUEST)
@@ -57,15 +93,6 @@ class AgentViewSet(viewsets.ModelViewSet):
         try:
             with transaction.atomic():
                 for agent_data in agents_data:
-                    # Map frontend fields to backend fields if necessary, 
-                    # but serializer expects snake_case usually. 
-                    # The frontend sends camelCase? Let's check script.js.
-                    # script.js sends: fullName, birthDate, gender, retirementDate, status, agreement, law, affiliateStatus, ministry
-                    # Model expects: full_name, birth_date, ...
-                    # I need to map keys or configure DRF to accept camelCase.
-                    # Simplest is to map manually here or use a parser.
-                    # Let's map manually for bulk since it's custom.
-                    
                     data = {
                         'full_name': agent_data.get('fullName'),
                         'birth_date': agent_data.get('birthDate'),
@@ -80,28 +107,32 @@ class AgentViewSet(viewsets.ModelViewSet):
                         'branch': agent_data.get('branch'),
                         'cuil': agent_data.get('cuil'),
                         'dni': agent_data.get('dni'),
-                        'seniority': agent_data.get('seniority'),
-                        'user': request.user.id
+                        'seniority': agent_data.get('seniority')
+                        # 'user' is read-only, so we don't pass it here
                     }
                     serializer = self.get_serializer(data=data)
                     serializer.is_valid(raise_exception=True)
-                    self.perform_create(serializer)
+                    # Pass user explicitly to save()
+                    serializer.save(user=request.user)
                     created_agents.append(serializer.data)
             return Response({'message': f'{len(created_agents)} agentes creados'}, status=status.HTTP_201_CREATED)
+        except ValidationError as e:
+            return Response({'error': f'Validation Error: {e.detail}'}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             import traceback
             traceback.print_exc()
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-    # Override create to handle camelCase from frontend for single create too?
-    # Or I can use djangorestframework-camel-case library.
-    # Or just update frontend to send snake_case.
-    # Updating frontend is cleaner but requires editing script.js.
-    # Handling it in backend allows frontend to stay same.
-    # I'll handle it in backend by overriding create or using a parser.
-    # Actually, for single create, I can just override create method in ViewSet.
     
-    def create(self, request, *args, **kwargs):
+    def create(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        """
+        Creates a single agent. Handles camelCase to snake_case mapping for frontend compatibility.
+
+        Args:
+            request (Request): HTTP request.
+
+        Returns:
+            Response: Created agent or error.
+        """
         try:
             # Manual mapping for single create to support existing frontend
             data = request.data.copy()
@@ -120,12 +151,19 @@ class AgentViewSet(viewsets.ModelViewSet):
                 if camel in data:
                     data[snake] = data.pop(camel)
             
-            serializer = self.get_serializer(data=data)
-            serializer.is_valid(raise_exception=True)
-            self.perform_create(serializer)
-            headers = self.get_success_headers(serializer.data)
-            return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+            return super().create(request, *args, **kwargs)
         except Exception as e:
-            import traceback
-            traceback.print_exc()
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=False, methods=['delete'])
+    def delete_all(self, request: Request) -> Response:
+        """
+        Deletes all agents belonging to the current user.
+        """
+        try:
+            count, _ = Agent.objects.filter(user=request.user).delete()
+            return Response({'message': f'Se eliminaron {count} agentes.'}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)            
+
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
