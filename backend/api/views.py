@@ -1,4 +1,5 @@
 from typing import Any, Dict
+from django.http import HttpResponse
 from django.db.models import QuerySet
 from rest_framework import viewsets, permissions, status, generics
 from rest_framework.request import Request
@@ -266,7 +267,7 @@ class AgentViewSet(viewsets.ModelViewSet):
         Exports the filtered agents to an Excel file.
         """
         import openpyxl
-        from django.http import HttpResponse
+
 
         # 1. Get filtered queryset (reuse existing logic)
         queryset = self.get_queryset()
