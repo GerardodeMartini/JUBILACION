@@ -76,48 +76,98 @@ class AgentViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['post'])
     def bulk(self, request: Request) -> Response:
         """
-        Bulk creates agents from a list of data.
-        Handles manual mapping of keys (camelCase -> snake_case).
-
-        Args:
-            request (Request): HTTP request containing a list of agent objects.
-
-        Returns:
-            Response: Success message or error.
+        Bulk creates agents from a list of data using bulk_create for performance.
+        Skips duplicates (DNI) by pre-fetching existing DNIS.
         """
         agents_data = request.data
         if not isinstance(agents_data, list):
             return Response({'error': 'Expected a list of agents'}, status=status.HTTP_400_BAD_REQUEST)
         
-        created_agents = []
         try:
-            with transaction.atomic():
-                for agent_data in agents_data:
-                    data = {
-                        'full_name': agent_data.get('fullName'),
-                        'birth_date': agent_data.get('birthDate'),
-                        'gender': agent_data.get('gender'),
-                        'retirement_date': agent_data.get('retirementDate'),
-                        'status': agent_data.get('status'),
-                        'agreement': agent_data.get('agreement'),
-                        'law': agent_data.get('law'),
-                        'affiliate_status': agent_data.get('affiliateStatus'),
-                        'ministry': agent_data.get('ministry'),
-                        'location': agent_data.get('location'),
-                        'branch': agent_data.get('branch'),
-                        'cuil': agent_data.get('cuil'),
-                        'dni': agent_data.get('dni'),
-                        'seniority': agent_data.get('seniority')
-                        # 'user' is read-only, so we don't pass it here
-                    }
-                    serializer = self.get_serializer(data=data)
-                    serializer.is_valid(raise_exception=True)
-                    # Pass user explicitly to save()
-                    serializer.save(user=request.user)
-                    created_agents.append(serializer.data)
-            return Response({'message': f'{len(created_agents)} agentes creados'}, status=status.HTTP_201_CREATED)
-        except ValidationError as e:
-            return Response({'error': f'Validation Error: {e.detail}'}, status=status.HTTP_400_BAD_REQUEST)
+            # 1. Extract all DNIs from incoming data to optimize duplicate checking
+            # Filter out entries with no DNI to avoid issues or handle them separately
+            incoming_dnis = {str(d.get('dni')).strip() for d in agents_data if d.get('dni')}
+            
+            # 2. Query DB once to find which of these DNIs already exist for this user
+            existing_dnis = set(Agent.objects.filter(
+                user=request.user, 
+                dni__in=incoming_dnis
+            ).values_list('dni', flat=True))
+
+            new_agents = []
+            skipped_count = 0
+            errors = []
+
+            for index, agent_data in enumerate(agents_data):
+                dni = agent_data.get('dni')
+                # Normalize DNI same way as above
+                if dni:
+                    dni = str(dni).strip()
+
+                # Deduplication Check
+                if dni and dni in existing_dnis:
+                    skipped_count += 1
+                    continue
+                
+                # If DNI appeared multiple times in the SAME request, we should also track that
+                # We can add 'dni' to existing_dnis immediately to catch duplicates within the file itself
+                if dni:
+                    existing_dnis.add(dni)
+
+                try:
+                    # Prepare agent instance (no save() yet)
+                    agent = Agent(
+                        user=request.user,
+                        full_name=agent_data.get('fullName'),
+                        birth_date=agent_data.get('birthDate'),
+                        gender=agent_data.get('gender'),
+                        retirement_date=agent_data.get('retirementDate'),
+                        status=agent_data.get('status'),
+                        agreement=agent_data.get('agreement'),
+                        law=agent_data.get('law'),
+                        affiliate_status=agent_data.get('affiliateStatus'),
+                        ministry=agent_data.get('ministry'),
+                        location=agent_data.get('location'),
+                        branch=agent_data.get('branch'),
+                        cuil=agent_data.get('cuil'),
+                        dni=dni, # Use normalized DNI
+                        seniority=agent_data.get('seniority')
+                    )
+                    new_agents.append(agent)
+
+                except Exception as e:
+                    errors.append(f"Row {index}: Error preparing data - {str(e)}")
+
+            # 3. Bulk Insert
+            if new_agents:
+                # bulk_create ignores signals like post_save, but is very fast.
+                # Since we don't have critical logic in save() other than ID generation 
+                # (which custom clean Agent.save logic might handle or UUIDField defaults),
+                # we need to be careful.
+                # Agent model has 'id = uuid.uuid4()' in save(). 
+                # bulk_create DOES NOT call save(). So IDs won't be generated if they are generated in save().
+                # We must generate IDs manually here if the model relies on save() for it.
+                
+                import uuid
+                for a in new_agents:
+                    if not a.id:
+                        a.id = uuid.uuid4()
+                        
+                Agent.objects.bulk_create(new_agents, batch_size=1000)
+
+            created_count = len(new_agents)
+            
+            msg = f"Importación finalizada. Creados: {created_count}. Duplicados omitidos: {skipped_count}."
+            if errors:
+                msg += f" Errores varios: {len(errors)} (ver consola)."
+            
+            return Response({
+                'message': msg,
+                'created': created_count,
+                'skipped': skipped_count,
+                'errors': errors
+            }, status=status.HTTP_200_OK)
+
         except Exception as e:
             import traceback
             traceback.print_exc()
