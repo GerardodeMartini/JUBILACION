@@ -1010,13 +1010,22 @@ function addMessage(text, sender) {
 }
 
 function normalizeAgent(a) {
+    // Recalculate Status on the fly to avoid stale DB labels
+    let status = typeof a.status === 'string' ? JSON.parse(a.status) : a.status;
+
+    // Force recalculation if date is available
+    if (a.birth_date && a.gender) {
+        const rDate = calculateRetirementDate(new Date(a.birth_date), a.gender);
+        status = getRetirementStatus(rDate);
+    }
+
     return {
         id: a.id,
         fullName: a.full_name,
         birthDate: a.birth_date,
         gender: a.gender,
         retirementDate: a.retirement_date,
-        status: typeof a.status === 'string' ? JSON.parse(a.status) : a.status,
+        status: status,
         age: a.birth_date ? calculateAge(new Date(a.birth_date)) : null,
         agreement: a.agreement,
         law: a.law,
