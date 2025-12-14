@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Jubilaciones</title>
+    <link rel="icon" type="image/svg+xml"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%232563eb'><path d='M20,3H4A2.2,2.2,0,0,0,1.8,5.2V18.8A2.2,2.2,0,0,0,4,21H20a2.2,2.2,0,0,0,2.2-2.2V5.2A2.2,2.2,0,0,0,20,3ZM4,19V5H20V19Z'/></svg>">
+
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <!-- SheetJS (xlsx) -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+
+    <link rel="stylesheet" href="/static/styles.css">
+    <script type="module" src="/static/script.js?v=29"></script>
+</head>
+
+<body>
+    <!-- Navigation -->
+    <!-- Navigation -->
+    <nav class="landing-nav">
+        <div class="nav-logo">
+            <i class="ph ph-identification-card"></i>
+            <span>Gestión Jubilaciones</span>
+        </div>
+        <div class="nav-actions">
+            <span id="landing-date"></span>
+            <a href="login.html" class="btn-primary small" style="text-decoration: none;">
+                Iniciar Sesión
+            </a>
+        </div>
+    </nav>
+
+    <div class="app-container">
+
+        <!-- Landing Hero -->
+        <header id="landing-hero" class="landing-hero">
+            <div class="hero-content">
+                <h1>Bienvenido a PILIN</h1>
+                <p class="subtitle">
+                    Esta plataforma ha sido diseñada para ayudarte en tu gestión jubilatoria. Aquí podrás encontrar
+                    información actualizada pertinente a cada trámite Jubilatorio para resolver dudas normativas
+                    al instante.
+                    <br><br>
+                    Nuestro objetivo es que tengas toda la información necesaria a un clic de distancia para
+                    brindar la mejor atención.
+                </p>
+                <div class="hero-features">
+                    <div class="feature-item">
+                        <i class="ph ph-robot"></i>
+                        <span>Chatbot IA</span>
+                    </div>
+                    <div class="feature-item">
+                        <i class="ph ph-magnifying-glass"></i>
+                        <span>Búsqueda Inteligente</span>
+                    </div>
+                    <div class="feature-item">
+                        <i class="ph ph-file-xls"></i>
+                        <span>Importación Excel</span>
+                    </div>
+                </div>
+
+                <!-- Resource Link Section -->
+                <div class="resource-section">
+                    <h3>Sobre qué trámite jubilatorio te interesaría informarte:</h3>
+                    <div class="resource-grid">
+                        <a href="https://dgp.lapampa.gob.ar/jubilacion-anticipada" target="_blank" class="btn-resource">
+                            Suplemento especial Vitalicio e Invalidez
+                            <i class="ph ph-arrow-square-out"></i>
+                        </a>
+                        <a href="https://dgp.lapampa.gob.ar/jubilacion-ordinaria" target="_blank" class="btn-resource">
+                            Jubilación Ordinaria
+                            <i class="ph ph-arrow-square-out"></i>
+                        </a>
+                        <a href="https://dgp.lapampa.gob.ar/jubilacion-por-anses" target="_blank" class="btn-resource">
+                            Jubilación por ANSES
+                            <i class="ph ph-arrow-square-out"></i>
+                        </a>
+                        <a href="https://dgp.lapampa.gob.ar/jubilaciones-especiales" target="_blank"
+                            class="btn-resource">
+                            Retiros Especiales
+                            <i class="ph ph-arrow-square-out"></i>
+                        </a>
+                    </div>
+
+                    <!-- Contact Section -->
+                    <div class="contact-info-section">
+                        <h4>CONTACTO:</h4>
+                        <div class="contact-item">
+                            <i class="ph ph-envelope-simple"></i>
+                            <span>E-mail de contacto: <a
+                                    href="mailto:legajospersonal@lapampa.gob.ar">legajospersonal@lapampa.gob.ar</a></span>
+                        </div>
+                        <div class="contact-item">
+                            <i class="ph ph-phone"></i>
+                            <span>Teléfono de contacto: 02954-452600 <strong>INTERNO 1213</strong></span>
+                        </div>
+                        <div class="contact-map"
+                            style="margin-top: 1.5rem; border-radius: 0.5rem; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                            <h4 style="margin-bottom: 0.5rem; font-size: 0.9rem; color: var(--text-muted);">
+                                Av. Pedro Luro 400, Santa Rosa (Centro Cívico)
+                            </h4>
+                            <!-- Google Maps Embed -->
+                            <iframe width="100%" height="250" frameborder="0"
+                                style="border:0; width: 100%; border-radius: 0.5rem;"
+                                src="https://maps.google.com/maps?q=-36.6214,-64.2794&hl=es&z=16&output=embed">
+                            </iframe>
+                            <br />
+                            <div style="margin-top: 0.5rem; text-align: center;">
+                                <a href="https://www.google.com/maps/search/?api=1&query=-36.6214,-64.2794&query_place_id=ChIJ73QJOnrNwpURU5LH5kxLceQ"
+                                    target="_blank" class="btn-secondary"
+                                    style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; width: 100%; justify-content: center; text-decoration: none;">
+                                    <i class="ph ph-map-pin"></i> Abrir en Google Maps (Cómo llegar)
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+
+
+        <!-- Footer -->
+        <!-- Footer -->
+        <footer class="landing-footer">
+            <div id="weather-widget" class="weather-widget">
+                <!-- Weather info will appear here -->
+                <span class="loading-weather">Cargando clima...</span>
+            </div>
+            <div class="landing-copyright">
+                &copy; 2025 Gestión de Jubilaciones. Powered by <b>PILIN</b>.
+            </div>
+        </footer>
+
+        <!-- Chatbot Widget -->
+        <div id="chatbot-widget" class="chatbot-widget">
+            <button id="chatbot-toggle" class="chatbot-toggle" onclick="toggleChatbot()">
+                <i class="ph ph-chat-circle-dots"></i>
+            </button>
+            <div id="chatbot-window" class="chatbot-window hidden">
+                <div class="chatbot-header">
+                    <div style="display: flex; align-items: center; gap: 0.75rem;">
+                        <div
+                            style="background: white; color: var(--primary); width: 2rem; height: 2rem; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold;">
+                            P</div>
+                        <h3>PILIN</h3>
+                    </div>
+                    <button onclick="toggleChatbot()"><i class="ph ph-x"></i></button>
+                </div>
+                <div id="chatbot-messages" class="chatbot-messages">
+                    <div class="message bot">
+                        ¡Hola! Soy <b>PILIN</b>. 🤖
+                        <br>Estoy aquí para responder tus dudas sobre jubilaciones.
+                        <br><br>Preguntame sobre:
+                        <br>• Jubilación Ordinaria
+                        <br>• Retiro Especial (Ley 3581)
+                        <br>• Suplemento Vitalicio
+                        <br>• Jubilación por ANSES
+                    </div>
+                </div>
+                <div class="chatbot-input">
+                    <input type="text" id="chat-input" placeholder="Escribí tu consulta..."
+                        onkeypress="handleChatInput(event)">
+                    <button onclick="sendMessage()"><i class="ph ph-paper-plane-right"></i></button>
+                </div>
+            </div>
+
+            <script>
+                // Force Landing View on Load
+                window.addEventListener('scroll', () => {
+                    // Handle scroll effects if needed
+                });
+
+                const cities = [
+                    { name: "Santa Rosa", lat: -36.6167, lon: -64.2833 },
+                    { name: "Toay", lat: -36.67, lon: -64.38 },
+                    { name: "Gral. Pico", lat: -35.65, lon: -63.75 },
+                    { name: "Realicó", lat: -35.03, lon: -64.25 },
+                    { name: "25 de Mayo", lat: -37.7667, lon: -67.7 }
+                ];
+
+                let currentCityIndex = 0;
+
+                async function fetchWeather(lat, lon) {
+                    try {
+                        const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`;
+                        const response = await fetch(url);
+                        const data = await response.json();
+                        return data.current_weather;
+                    } catch (error) {
+                        console.error("Error fetching weather:", error);
+                        const widget = document.getElementById('weather-widget');
+                        if (widget) widget.innerHTML = '<span style="font-size: 0.8rem; color: var(--text-muted);">Clima no disponible</span>';
+                        return null;
+                    }
+                }
+
+                async function updateWeather() {
+                    const city = cities[currentCityIndex];
+                    const weather = await fetchWeather(city.lat, city.lon);
+                    const widget = document.getElementById('weather-widget');
+
+                    if (widget && weather) {
+                        let icon = "sun";
+                        if (weather.weathercode > 3) icon = "cloud";
+                        if (weather.weathercode >= 60) icon = "cloud-rain";
+                        if (weather.weathercode >= 95) icon = "cloud-lightning";
+
+                        widget.innerHTML = `
+                    <div class="weather-content fade-in">
+                        <i class="ph ph-${icon}"></i>
+                        <span class="weather-city">${city.name}</span>
+                        <span class="weather-temp">${weather.temperature}°C</span>
+                    </div>
+                `;
+                    }
+
+                    currentCityIndex = (currentCityIndex + 1) % cities.length;
+                }
+
+                // Set Date and Init Weather on Load
+                document.addEventListener('DOMContentLoaded', () => {
+                    const dateEl = document.getElementById('landing-date');
+                    if (dateEl) {
+                        const now = new Date();
+                        const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+                        const dateStr = now.toLocaleDateString('es-ES', options);
+                        dateEl.textContent = dateStr.charAt(0).toUpperCase() + dateStr.slice(1);
+                    }
+
+                    updateWeather();
+                    setInterval(updateWeather, 5000);
+                });
+            </script>
+</body>
+
+</html>

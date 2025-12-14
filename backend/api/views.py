@@ -1,7 +1,7 @@
 from typing import Any, Dict
 from django.http import HttpResponse
 from django.db.models import QuerySet
-from rest_framework import viewsets, permissions, status, generics
+from rest_framework import viewsets, permissions, status, generics, views
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.decorators import action
@@ -30,31 +30,60 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         data['role'] = self.user.role  # type: ignore
         return data
 
+from django.core.mail import send_mail
+from django.conf import settings
+from django.urls import reverse
+from django.utils.encoding import force_bytes, force_str
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.contrib.auth.tokens import default_token_generator
+from django.shortcuts import redirect
+
 class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
 
 class RegisterView(generics.CreateAPIView):
     queryset = User.objects.all()
-    # permission_classes = (permissions.AllowAny,) # Default is AllowAny? Let's be explicit
     permission_classes = (permissions.AllowAny,)
     serializer_class = UserSerializer
 
-    def create(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        """
-        Creates a new user instance.
+    def perform_create(self, serializer):
+        # Create inactive user
+        user = serializer.save(is_active=False)
+        
+        # Generate token and uid
+        token = default_token_generator.make_token(user)
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+        
+        # Construct link (Dynamic for Prod/Dev compatibility)
+        # Uses request.scheme (http/https) and get_host() (domain) to build the correct URL
+        activation_link = f"{self.request.scheme}://{self.request.get_host()}/api/auth/activate/{uid}/{token}/"
+        
+        # Send Email
+        send_mail(
+            subject='Activa tu cuenta en PILIN',
+            message=f'Hola {user.username},\n\nPor favor activa tu cuenta haciendo clic en el siguiente enlace:\n{activation_link}\n\nGracias!',
+            from_email=settings.DEFAULT_FROM_EMAIL if hasattr(settings, 'DEFAULT_FROM_EMAIL') else 'noreply@pilin.local',
+            recipient_list=[user.email],
+            fail_silently=False,
+        )
 
-        Args:
-            request (Request): The HTTP request containing user data.
+class ActivateAccountView(views.APIView):
+    permission_classes = (permissions.AllowAny,)
 
-        Returns:
-            Response: The created user data or an error message.
-        """
+    def get(self, request, uidb64, token):
         try:
-            return super().create(request, *args, **kwargs)
-        except Exception as e:
-            import traceback
-            traceback.print_exc()
-            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            uid = force_str(urlsafe_base64_decode(uidb64))
+            user = User.objects.get(pk=uid)
+        except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+            user = None
+
+        if user is not None and default_token_generator.check_token(user, token):
+            user.is_active = True
+            user.save()
+            # Redirect to login with success flag
+            return redirect('/login.html?activated=true')
+        else:
+            return Response({'error': 'Token inválido o expirado'}, status=status.HTTP_400_BAD_REQUEST)
 
 class AgentViewSet(viewsets.ModelViewSet):
     serializer_class = AgentSerializer

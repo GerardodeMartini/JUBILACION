@@ -89,13 +89,15 @@ window.addEventListener('DOMContentLoaded', () => {
 
     // Page Logic
     const isDashboard = window.location.pathname.endsWith('dashboard.html');
-    const isLogin = window.location.pathname.endsWith('index.html') || window.location.pathname === '/' || window.location.pathname.endsWith('/');
-    const isRegister = window.location.pathname.endsWith('register.html');
+    const isInicio = window.location.pathname.endsWith('inicio.html') || window.location.pathname === '/' || window.location.pathname.endsWith('/');
+    const isLogin = window.location.pathname.endsWith('login.html');
+    const isRegister = window.location.pathname.endsWith('registro.html');
 
     if (token) {
         const savedUser = localStorage.getItem('auth_user');
         if (savedUser) currentUser = JSON.parse(savedUser);
 
+        // If logged in and on auth pages, go to dashboard
         if (isLogin || isRegister) {
             window.location.href = 'dashboard.html';
             return;
@@ -110,10 +112,20 @@ window.addEventListener('DOMContentLoaded', () => {
             loadAgents(null, {}, 100);
         }
     } else {
+        // If not logged in and on dashboard, go to login
         if (isDashboard) {
-            window.location.href = 'index.html';
+            window.location.href = 'login.html';
             return;
         }
+    }
+
+
+    // Check for activation success
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('activated') === 'true') {
+        alert('¡Cuenta activada con éxito! Ya puedes iniciar sesión.');
+        // Clean URL
+        window.history.replaceState({}, document.title, window.location.pathname);
     }
 });
 
@@ -155,25 +167,60 @@ async function handleLogin(e) {
 async function handleRegister(e) {
     e.preventDefault();
     const username = document.getElementById('register-username').value;
+    const email = document.getElementById('register-email').value;
     const password = document.getElementById('register-password').value;
+    const confirmPassword = document.getElementById('register-confirm-password').value;
+
+    if (password !== confirmPassword) {
+        alert('Las contraseñas no coinciden.');
+        return;
+    }
 
     try {
         const res = await fetch(`${API_URL}/auth/register`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, password })
+            body: JSON.stringify({
+                username,
+                email,
+                password,
+                confirm_password: confirmPassword
+            })
         });
 
         if (res.ok) {
-            alert('Usuario creado con éxito. Por favor inicia sesión.');
-            window.location.href = 'index.html';
+            alert('Cuenta creada. Revisa tu email para activarla.');
+            window.location.href = 'login.html';
         } else {
             const data = await res.json();
-            alert(`Error: ${data.error}`);
+            // Handle specific field errors or general errors
+            let msg = 'Error en el registro';
+            if (data.password) msg = `Contraseña: ${data.password[0]}`;
+            else if (data.email) msg = `Email: ${data.email[0]}`;
+            else if (data.username) msg = `Usuario: ${data.username[0]}`;
+            else if (data.error) msg = data.error;
+
+            alert(msg);
         }
     } catch (err) {
         console.error(err);
         alert('Error de conexión');
+    }
+}
+
+function togglePasswordVisibility(inputId) {
+    const input = document.getElementById(inputId);
+    const btn = input.nextElementSibling; // The button
+    const icon = btn.querySelector('i');
+
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.classList.remove('ph-eye');
+        icon.classList.add('ph-eye-slash');
+    } else {
+        input.type = 'password';
+        icon.classList.remove('ph-eye-slash');
+        icon.classList.add('ph-eye');
     }
 }
 
@@ -184,7 +231,7 @@ function logout() {
     localStorage.removeItem('auth_user');
     globalAgents = [];
 
-    window.location.href = 'index.html';
+    window.location.href = 'inicio.html';
 }
 
 // --- Helper Functions ---
@@ -1438,6 +1485,7 @@ window.showAllAgents = showAllAgents;
 window.nextPage = nextPage;
 window.prevPage = prevPage;
 window.searchAgents = searchAgents;
+window.togglePasswordVisibility = togglePasswordVisibility;
 window.resetSearch = resetSearch;
 window.handleSearchInput = handleSearchInput;
 window.exportAgents = exportAgents;

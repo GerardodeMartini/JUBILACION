@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crear Cuenta - Gestión de Jubilaciones</title>
+    <link rel="icon" type="image/svg+xml"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%232563eb'><path d='M20,3H4A2.2,2.2,0,0,0,1.8,5.2V18.8A2.2,2.2,0,0,0,4,21H20a2.2,2.2,0,0,0,2.2-2.2V5.2A2.2,2.2,0,0,0,20,3ZM4,19V5H20V19Z'/></svg>">
+
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <link rel="stylesheet" href="/static/styles.css">
+    <script type="module" src="/static/script.js?v=29"></script>
+
+    <style>
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background-color: var(--background);
+        }
+
+        .login-container {
+            width: 100%;
+            max-width: 400px;
+            padding: 2rem;
+        }
+    </style>
+</head>
+
+<body>
+
+    <section id="auth-section" class="card upload-card login-container">
+        <div class="logo-container" style="margin-bottom: 2rem; text-align: center;">
+            <i class="ph ph-user-plus logo-icon" style="font-size: 3rem; color: var(--primary);"></i>
+            <h1 style="font-size: 1.5rem; margin-top: 1rem;">Unirse a PILIN</h1>
+        </div>
+
+        <div id="register-form-container">
+            <h2 style="margin-bottom: 1.5rem; text-align: center;">Crear Cuenta</h2>
+            <form onsubmit="handleRegister(event)">
+                <div class="form-group">
+                    <label for="register-email">Email</label>
+                    <input type="email" id="register-email" required autocomplete="email">
+                </div>
+                <div class="form-group">
+                    <label for="register-username">Usuario</label>
+                    <input type="text" id="register-username" required autocomplete="username">
+                </div>
+                <div class="form-group" style="position: relative;">
+                    <label for="register-password">Contraseña</label>
+                    <div class="password-wrapper" style="position: relative;">
+                        <input type="password" id="register-password" required autocomplete="new-password"
+                            style="padding-right: 2.5rem;">
+                        <button type="button" class="btn-icon-eye"
+                            onclick="togglePasswordVisibility('register-password')"
+                            style="position: absolute; right: 0.5rem; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--text-muted);">
+                            <i class="ph ph-eye"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="form-group" style="position: relative;">
+                    <label for="register-confirm-password">Confirmar Contraseña</label>
+                    <div class="password-wrapper" style="position: relative;">
+                        <input type="password" id="register-confirm-password" required autocomplete="new-password"
+                            style="padding-right: 2.5rem;">
+                        <button type="button" class="btn-icon-eye"
+                            onclick="togglePasswordVisibility('register-confirm-password')"
+                            style="position: absolute; right: 0.5rem; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--text-muted);">
+                            <i class="ph ph-eye"></i>
+                        </button>
+                    </div>
+                </div>
+                <button type="submit" class="btn-primary" style="width: 100%;">Registrarse</button>
+            </form>
+            <div
+                style="margin-top: 1.5rem; display: flex; flex-direction: column; gap: 1rem; align-items: center; width: 100%;">
+                <p style="font-size: 0.9rem; color: var(--text-muted);">
+                    ¿Ya tienes cuenta? <a href="login.html"
+                        style="color: var(--primary); font-weight: 600; text-decoration: none;">Inicia sesión</a>
+                </p>
+                <a href="inicio.html" class="btn-secondary"
+                    style="width: 100%; justify-content: center; text-decoration: none; display: flex; gap: 0.5rem;">
+                    <i class="ph ph-arrow-left"></i> Volver al Inicio
+                </a>
+            </div>
+        </div>
+    </section>
+
+</body>
+
+</html>
