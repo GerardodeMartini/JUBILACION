@@ -1105,7 +1105,21 @@ async function processUserQuery(query) {
         return 'Listo jefe, volví a cargar la lista de Inminentes. Tabla limpia.';
     }
 
-    // Command: Filter
+    // Command: Status Filters (Explicit)
+    if (lower.includes('inminente') || lower.includes('inminent')) {
+        filterByStatus('inminente');
+        return 'Filtrando por: **Inminentes** (< 6 meses).';
+    }
+    if (lower.includes('vencido') || lower.includes('ya') || lower.includes('pasado')) {
+        filterByStatus('vencido');
+        return 'Filtrando por: **Vencidos**. Estos ya deberían estar jubilados...';
+    }
+    if (lower.includes('proximo') || lower.includes('próximo') || lower.includes('cercano') || lower.includes('año')) {
+        filterByStatus('proximo');
+        return 'Filtrando por: **Próximos** (6 a 12 meses).';
+    }
+
+    // Command: Filter (Jurisdiction)
     if (lower.includes('filtra') || lower.includes('ver los de') || lower.includes('busca los de') || lower.includes('mostrar') || lower.includes('jurisdiccion')) {
         let term = '';
         if (lower.includes('filtrame los de')) term = lower.split('filtrame los de')[1];
