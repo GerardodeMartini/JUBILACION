@@ -20,6 +20,7 @@ let token = localStorage.getItem('auth_token');
 let nextPageUrl = null;
 let prevPageUrl = null;
 let currentPage = 1;
+let currentPageSize = 50; // Track page size for continuous numbering
 let currentStatusFilter = null;
 
 // DOM Elements
@@ -103,7 +104,9 @@ window.addEventListener('DOMContentLoaded', () => {
             if (userDisplay) {
                 userDisplay.textContent = `${currentUser.username} (${currentUser.role === 'admin' ? 'Admin' : 'Usuario'})`;
             }
-            loadAgents();
+            // Default View: Imminent Agents (100 per page as requested)
+            currentStatusFilter = 'inminente';
+            loadAgents(null, {}, 100);
         }
     } else {
         if (isDashboard) {
@@ -490,15 +493,21 @@ async function analyzeData(data) {
 
 // --- Persistence (API) ---
 
-async function loadAgents(url = null) {
+
+// --- Persistence (API) ---
+
+async function loadAgents(url = null, filters = {}, pageSize = 100) {
     let fetchUrl;
+
+    // Update global page size tracker if this is a fresh load (not pagination link)
+    if (!url) {
+        currentPageSize = pageSize;
+    }
 
     if (url) {
         // Pagination case: URL provided by DRF (absolute)
-        // We only want the query parameters to avoid Origin/Host mismatch issues
         try {
             const urlObj = new URL(url);
-            // Construct cleaner URL using our trusted API_URL
             fetchUrl = `${API_URL}/agents/${urlObj.search}`;
         } catch (e) {
             console.warn('Invalid pagination URL, using base:', url);
@@ -506,9 +515,18 @@ async function loadAgents(url = null) {
         }
     } else {
         // Initial load or filter change
-        fetchUrl = `${API_URL}/agents/`;
+        fetchUrl = `${API_URL}/agents/?page_size=${pageSize}`;
+
+        // Add Filters
         if (currentStatusFilter) {
-            fetchUrl += `?status=${currentStatusFilter}`;
+            fetchUrl += `&status=${currentStatusFilter}`;
+        }
+
+        // Add Custom Filters (Search)
+        for (const [key, value] of Object.entries(filters)) {
+            if (value) {
+                fetchUrl += `&${key}=${encodeURIComponent(value)}`;
+            }
         }
     }
 
@@ -557,7 +575,6 @@ async function loadAgents(url = null) {
                 console.log('No agents found');
             }
 
-            // Render what we received (already filtered by backend)
             renderDashboard();
 
         } else if (res.status === 401 || res.status === 403) {
@@ -585,7 +602,7 @@ function prevPage() {
 
 function filterByStatus(statusCode) {
     currentStatusFilter = statusCode;
-    currentPage = 1; // Reset to page 1 on new filter
+    currentPage = 1;
     loadAgents();
 }
 
@@ -595,26 +612,68 @@ function showAllAgents() {
     loadAgents();
 }
 
-function updateStats() {
-    const totalCount = document.getElementById('total-count');
-    const vencidoCount = document.getElementById('vencido-count');
-    const proximoCount = document.getElementById('proximo-count');
+// --- Search Features ---
 
-    if (!totalCount || !vencidoCount || !proximoCount) return;
+function searchAgents() {
+    const criterion = document.getElementById('search-criterion').value;
+    const value = document.getElementById('search-input').value.trim();
 
-    totalCount.textContent = globalAgents.length;
-
-    const vencidos = globalAgents.filter(a => a.status.code === 'vencido').length;
-    vencidoCount.textContent = vencidos;
-
-    const inminenteCount = document.getElementById('inminente-count');
-    if (inminenteCount) {
-        const inminentes = globalAgents.filter(a => a.status.code === 'inminente').length;
-        inminenteCount.textContent = inminentes;
+    if (!value) {
+        alert("Por favor ingrese un valor para buscar.");
+        return;
     }
 
-    const proximos = globalAgents.filter(a => a.status.code === 'proximo').length;
-    proximoCount.textContent = proximos;
+    // Reset pagination and status for search
+    currentStatusFilter = null;
+    currentPage = 1;
+
+    const filters = {};
+    filters[criterion] = value;
+
+    // Load with filters, standard page size
+    loadAgents(null, filters, 100);
+}
+
+function resetSearch() {
+    document.getElementById('search-input').value = '';
+    // Reset to "Inminente" view (100 per page)
+    currentStatusFilter = 'inminente';
+    currentPage = 1;
+    loadAgents(null, {}, 100);
+}
+
+function handleSearchInput(event) {
+    if (event.key === 'Enter') {
+        searchAgents();
+    }
+}
+
+async function fetchStats() {
+    try {
+        const res = await fetch(`${API_URL}/agents/stats/`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+            const stats = await res.json();
+
+            const totalCount = document.getElementById('total-count');
+            const vencidoCount = document.getElementById('vencido-count');
+            const proximoCount = document.getElementById('proximo-count');
+            const inminenteCount = document.getElementById('inminente-count');
+
+            if (totalCount) totalCount.textContent = stats.total;
+            if (vencidoCount) vencidoCount.textContent = stats.vencido;
+            if (proximoCount) proximoCount.textContent = stats.proximo;
+            if (inminenteCount) inminenteCount.textContent = stats.inminente;
+        }
+    } catch (e) {
+        console.error('Error fetching stats:', e);
+    }
+}
+
+// Renamed for compatibility, but now calls fetchStats
+function updateStats() {
+    fetchStats();
 }
 
 function renderDashboard() {
@@ -633,7 +692,7 @@ function renderDashboard() {
         return;
     }
 
-    globalAgents.forEach(agent => {
+    globalAgents.forEach((agent, index) => {
         const row = document.createElement('tr');
 
         let birthDateStr = '-';
@@ -650,6 +709,7 @@ function renderDashboard() {
         }
 
         row.innerHTML = `
+            <td>${(currentPage - 1) * currentPageSize + index + 1}</td>
             <td>
                 <div style="font-weight: 500; cursor: pointer; color: var(--primary);" onclick="openDetailsModal('${agent.id}')">
                     ${agent.fullName}
@@ -1126,13 +1186,14 @@ function renderFilteredAgents(filteredList) {
     if (!tableBody) return;
     tableBody.innerHTML = '';
 
-    filteredList.forEach(agent => {
+    filteredList.forEach((agent, index) => {
         const row = document.createElement('tr');
 
         let birthDateStr = agent.birthDate ? new Date(agent.birthDate).toLocaleDateString('es-AR') : '-';
         let rDateStr = agent.retirementDate ? new Date(agent.retirementDate).toLocaleDateString('es-AR') : '-';
 
         row.innerHTML = `
+            <td>${index + 1}</td>
             <td>
                 <div style="font-weight: 500; cursor: pointer; color: var(--primary);" onclick="openDetailsModal('${agent.id}')">
                     ${agent.fullName}
@@ -1187,3 +1248,6 @@ window.sendMessage = sendMessage;
 window.showAllAgents = showAllAgents;
 window.nextPage = nextPage;
 window.prevPage = prevPage;
+window.searchAgents = searchAgents;
+window.resetSearch = resetSearch;
+window.handleSearchInput = handleSearchInput;

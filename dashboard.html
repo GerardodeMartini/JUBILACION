@@ -21,7 +21,7 @@
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 
     <link rel="stylesheet" href="/static/styles.css">
-    <script type="module" src="/static/script.js?v=18"></script>
+    <script type="module" src="/static/script.js?v=19"></script>
 </head>
 
 <body>
@@ -48,15 +48,34 @@
                     <div class="dashboard-header">
                         <div>
                             <h2>Resultados del Análisis</h2>
-                            <div class="header-actions">
-                                <button class="btn-primary small" onclick="openModal()">
-                                    <i class="ph ph-plus"></i> Agregar Agente
+
+                            <!-- Search Component -->
+                            <div class="search-container"
+                                style="display: flex; gap: 0.5rem; margin-top: 0.5rem; align-items: center; flex-wrap: wrap;">
+                                <select id="search-criterion" class="form-select"
+                                    style="padding: 0.5rem; border: 1px solid var(--border); border-radius: var(--radius);">
+                                    <option value="dni">DNI</option>
+                                    <option value="name">Apellido/Nombre</option>
+                                    <option value="affiliate">N° Afiliado</option>
+                                    <option value="cuil">CUIL</option>
+                                </select>
+                                <input type="text" id="search-input" placeholder="Buscar..."
+                                    style="padding: 0.5rem; border: 1px solid var(--border); border-radius: var(--radius); min-width: 250px;"
+                                    onkeypress="handleSearchInput(event)">
+                                <button class="btn-primary" onclick="searchAgents()">
+                                    <i class="ph ph-magnifying-glass"></i> Buscar
+                                </button>
+                                <button class="btn-secondary" onclick="resetSearch()" title="Limpiar y ver Inminentes">
+                                    <i class="ph ph-arrow-counter-clockwise"></i>
+                                </button>
+                            </div>
+
+                            <div class="header-actions" style="margin-top: 1rem;">
+                                <button class="btn-secondary small" onclick="openModal()">
+                                    <i class="ph ph-plus"></i> Agregar
                                 </button>
                                 <button class="btn-secondary small" onclick="openUploadModal()">
-                                    <i class="ph ph-microsoft-excel-logo"></i> Importar Excel
-                                </button>
-                                <button class="btn-secondary small" onclick="showAllAgents()">
-                                    <i class="ph ph-list"></i> Ver Todos
+                                    <i class="ph ph-microsoft-excel-logo"></i> Importar
                                 </button>
                                 <button class="btn-secondary small" onclick="clearAllData()">
                                     <i class="ph ph-trash"></i> Borrar Todo
@@ -90,6 +109,7 @@
                         <table>
                             <thead>
                                 <tr>
+                                    <th>#</th>
                                     <th>Agente</th>
                                     <th>Fecha Nacimiento</th>
                                     <th>Edad</th>

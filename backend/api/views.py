@@ -62,16 +62,56 @@ class AgentViewSet(viewsets.ModelViewSet):
     def get_queryset(self) -> QuerySet:
         """
         Returns the list of agents belonging to the current user.
+        Supports filtering by specific fields and status.
         """
         user = self.request.user
         queryset = Agent.objects.filter(user=user).select_related('user')
         
+        # Status Filter
         status_param = self.request.query_params.get('status')
         if status_param:
             queryset = queryset.filter(status__code=status_param)
-            
-        return queryset
 
+        # Specific Field Filters
+        dni = self.request.query_params.get('dni')
+        if dni:
+            queryset = queryset.filter(dni__icontains=dni)
+
+        name = self.request.query_params.get('name') # Search in full_name
+        if name:
+            queryset = queryset.filter(full_name__icontains=name)
+
+        cuil = self.request.query_params.get('cuil')
+        if cuil:
+            queryset = queryset.filter(cuil__icontains=cuil)
+
+        affiliate = self.request.query_params.get('affiliate')
+        if affiliate:
+            queryset = queryset.filter(affiliate_status__icontains=affiliate)
+            
+        return queryset.order_by('full_name') # Sort alphabetically by default as requested before
+
+
+    @action(detail=False, methods=['get'])
+    def stats(self, request: Request) -> Response:
+        """
+        Returns global statistics for the user's agents.
+        Used to populate dashboard counters independently of pagination.
+        """
+        user = self.request.user
+        queryset = Agent.objects.filter(user=user)
+        
+        total = queryset.count()
+        vencido = queryset.filter(status__code='vencido').count()
+        proximo = queryset.filter(status__code='proximo').count()
+        inminente = queryset.filter(status__code='inminente').count()
+        
+        return Response({
+            'total': total,
+            'vencido': vencido,
+            'proximo': proximo,
+            'inminente': inminente
+        })
 
     @action(detail=False, methods=['post'])
     def bulk(self, request: Request) -> Response:
