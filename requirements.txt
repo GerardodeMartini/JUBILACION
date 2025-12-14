@@ -11,3 +11,4 @@ whitenoise
 djangorestframework-simplejwt
 python-decouple
 openpyxl
+django-anymail[resend]

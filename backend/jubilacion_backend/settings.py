@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'corsheaders',
+    'anymail',
     'api',
 ]
 
@@ -135,29 +136,18 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 
-# Email Configuration
-# Default to File-based for local, but overrideable via Env (e.g. for Production)
-EMAIL_BACKEND = config('EMAIL_BACKEND', default='django.core.mail.backends.filebased.EmailBackend')
-EMAIL_FILE_PATH = BASE_DIR / 'sent_emails'
-
-# SMTP Settings (Required for Production)
-EMAIL_HOST = config('EMAIL_HOST', default='localhost')
-EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
-EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
-EMAIL_USE_SSL = config('EMAIL_USE_SSL', default=False, cast=bool)
-EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
-EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
+# Email Configuration (Resend API - Bypasses SMTP Port Blocks)
+EMAIL_BACKEND = "anymail.backends.resend.EmailBackend"
+ANYMAIL = {
+    "RESEND_API_KEY": config('RESEND_API_KEY', default=''),
+}
 DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='noreply@pilin.local')
 
 # DEBUG: Print Email Config to Console on Startup (Masked Password)
 if not DEBUG:
-    print("--- EMAIL CONFIG DEBUG ---")
+    print("--- EMAIL CONFIG DEBUG (ANYMAIL) ---")
     print(f"EMAIL_BACKEND: {EMAIL_BACKEND}")
-    print(f"EMAIL_HOST: {EMAIL_HOST}")
-    print(f"EMAIL_PORT: {EMAIL_PORT}")
-    print(f"EMAIL_USE_TLS: {EMAIL_USE_TLS}")
-    print(f"EMAIL_USE_SSL: {EMAIL_USE_SSL}")
-    print(f"EMAIL_HOST_USER: {EMAIL_HOST_USER}")
+    print(f"RESEND_API_KEY: {ANYMAIL['RESEND_API_KEY'][:5]}..." if ANYMAIL['RESEND_API_KEY'] else "RESEND_API_KEY: NOT SET")
     print("--------------------------")
 
 STATIC_ROOT = BASE_DIR / 'staticfiles'
