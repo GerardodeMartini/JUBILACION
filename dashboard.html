@@ -21,7 +21,7 @@
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 
     <link rel="stylesheet" href="/static/styles.css">
-    <script type="module" src="/static/script.js?v=19"></script>
+    <script type="module" src="/static/script.js?v=27"></script>
 </head>
 
 <body>
@@ -76,6 +76,10 @@
                                 </button>
                                 <button class="btn-secondary small" onclick="openUploadModal()">
                                     <i class="ph ph-microsoft-excel-logo"></i> Importar
+                                </button>
+                                <button class="btn-secondary small" onclick="exportAgents()"
+                                    title="Descargar lista actual">
+                                    <i class="ph ph-download-simple"></i> Exportar
                                 </button>
                                 <button class="btn-secondary small" onclick="clearAllData()">
                                     <i class="ph ph-trash"></i> Borrar Todo

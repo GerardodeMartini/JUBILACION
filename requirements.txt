@@ -10,3 +10,4 @@ django-cors-headers
 whitenoise
 djangorestframework-simplejwt
 python-decouple
+openpyxl

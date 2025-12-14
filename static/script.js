@@ -22,6 +22,7 @@ let prevPageUrl = null;
 let currentPage = 1;
 let currentPageSize = 50; // Track page size for continuous numbering
 let currentStatusFilter = null;
+let currentFilters = {}; // Track active filters (Name, Ministry, etc.)
 
 // DOM Elements
 let dropZone;
@@ -502,6 +503,8 @@ async function loadAgents(url = null, filters = {}, pageSize = 100) {
     // Update global page size tracker if this is a fresh load (not pagination link)
     if (!url) {
         currentPageSize = pageSize;
+        // Update global filters
+        currentFilters = filters || {};
     }
 
     if (url) {
@@ -597,6 +600,50 @@ function prevPage() {
     if (prevPageUrl) {
         currentPage--;
         loadAgents(prevPageUrl);
+        loadAgents(prevPageUrl);
+    }
+}
+
+async function exportAgents() {
+    // Determine the export URL with current filters
+    let exportUrl = `${API_URL}/agents/export/?`;
+
+    // Add Status Filter
+    if (currentStatusFilter) {
+        exportUrl += `status=${currentStatusFilter}&`;
+    }
+
+    // Add Custom Filters (tracked in global currentFilters)
+    for (const [key, value] of Object.entries(currentFilters)) {
+        if (value) {
+            exportUrl += `${key}=${encodeURIComponent(value)}&`;
+        }
+    }
+
+    try {
+        // Use fetch with Auth header instead of window.location.href
+        const res = await fetch(exportUrl, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (res.ok) {
+            const blob = await res.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'agentes_filtrados.xlsx'; // Filename
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            a.remove();
+        } else {
+            console.error('Export failed:', res.status);
+            if (res.status === 401) logout();
+            else alert('Error al exportar el archivo.');
+        }
+    } catch (e) {
+        console.error('Export error:', e);
+        alert('Error de conexión al exportar.');
     }
 }
 
@@ -614,24 +661,18 @@ function showAllAgents() {
 
 // --- Search Features ---
 
-function searchAgents() {
+async function searchAgents() {
     const criterion = document.getElementById('search-criterion').value;
     const value = document.getElementById('search-input').value.trim();
 
-    if (!value) {
-        alert("Por favor ingrese un valor para buscar.");
-        return;
+    if (value) {
+        currentStatusFilter = null; // Search overrides status tabs
+        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+
+        await loadAgents(null, { [criterion]: value }, 100);
+    } else {
+        loadAgents();
     }
-
-    // Reset pagination and status for search
-    currentStatusFilter = null;
-    currentPage = 1;
-
-    const filters = {};
-    filters[criterion] = value;
-
-    // Load with filters, standard page size
-    loadAgents(null, filters, 100);
 }
 
 function resetSearch() {
@@ -924,7 +965,7 @@ function handleChatInput(e) {
     }
 }
 
-function sendMessage() {
+async function sendMessage() {
     const input = document.getElementById('chat-input');
     const text = input.value.trim();
     if (!text) return;
@@ -933,10 +974,30 @@ function sendMessage() {
     input.value = '';
 
     // Process logic with a small delay to simulate "thinking"
-    setTimeout(() => {
-        const response = processUserQuery(text);
+    // Using setTimeout wrapped in a promise or just awaiting after a delay
+
+    // Simulate thinking delay visually if desired, but for now just await response
+    const loadingId = addMessage('...', 'bot'); // Optional: Add a temp loading message
+
+    try {
+        // Improve: Remove "..." message before adding real response, or just replace it.
+        // For simplicity: We wait 400ms then call async process
+        await new Promise(r => setTimeout(r, 400));
+
+        const response = await processUserQuery(text);
+
+        // Remove loading message if we had one, or just append. 
+        // Simplest compatible way: Remove the last '...' message if it exists
+        const container = document.getElementById('chatbot-messages');
+        if (container.lastChild && container.lastChild.innerHTML === '...') {
+            container.removeChild(container.lastChild);
+        }
+
         addMessage(response, 'bot');
-    }, 400);
+    } catch (e) {
+        console.error(e);
+        addMessage('Ups, tuve un error al buscar esa información.', 'bot');
+    }
 }
 
 function addMessage(text, sender) {
@@ -948,13 +1009,34 @@ function addMessage(text, sender) {
     container.scrollTop = container.scrollHeight;
 }
 
+function normalizeAgent(a) {
+    return {
+        id: a.id,
+        fullName: a.full_name,
+        birthDate: a.birth_date,
+        gender: a.gender,
+        retirementDate: a.retirement_date,
+        status: typeof a.status === 'string' ? JSON.parse(a.status) : a.status,
+        age: a.birth_date ? calculateAge(new Date(a.birth_date)) : null,
+        agreement: a.agreement,
+        law: a.law,
+        affiliate_status: a.affiliate_status,
+        ministry: a.ministry,
+        location: a.location,
+        branch: a.branch,
+        cuil: a.cuil,
+        dni: a.dni,
+        seniority: a.seniority
+    };
+}
+
 // Helper for accent-insensitive comparison
 function normalizeString(str) {
     if (!str) return '';
     return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 }
 
-function processUserQuery(query) {
+async function processUserQuery(query) {
     const normalizedQuery = normalizeString(query);
     const lower = query.toLowerCase().trim();
 
@@ -1019,8 +1101,35 @@ function processUserQuery(query) {
 
     // Command: Reset/Clean
     if (lower.includes('reset') || lower.includes('limpiar') || lower.includes('todos') || lower.includes('borrar') || lower.includes('inicio') || lower.includes('volver') || lower.includes('lista') || lower.includes('original')) {
-        loadAgents();
-        return 'Listo jefe, volví a cargar la lista completa. Ahí tenés a todos de nuevo.';
+        resetSearch(); // Use the dedicated reset function
+        return 'Listo jefe, volví a cargar la lista de Inminentes. Tabla limpia.';
+    }
+
+    // Command: Filter
+    if (lower.includes('filtra') || lower.includes('ver los de') || lower.includes('busca los de') || lower.includes('mostrar') || lower.includes('jurisdiccion')) {
+        let term = '';
+        if (lower.includes('filtrame los de')) term = lower.split('filtrame los de')[1];
+        else if (lower.includes('filtra los de')) term = lower.split('filtra los de')[1];
+        else if (lower.includes('ver los de')) term = lower.split('ver los de')[1];
+        else if (lower.includes('busca los de')) term = lower.split('busca los de')[1];
+        else if (lower.includes('mostrar')) term = lower.split('mostrar')[1];
+
+        // If query is just "salud" or something direct
+        if (!term && !lower.includes(' ')) term = lower;
+
+        if (term) {
+            term = term.trim();
+
+            // Clear status filter to search globally
+            currentStatusFilter = null;
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            // Optionally set 'Todos' active if you have a 'Todos' button, or just leave all inactive
+            // Assuming the first button might be 'Todos' or similar, but safely just unchecking all is fine.
+
+            // Call loadAgents with ministry filter
+            await loadAgents(null, { ministry: term }, 100);
+            return `Filtrando por jurisdicción/ministerio: "**${term}**". Mirá la tabla.`;
+        }
     }
 
     // --- SMART NUMERIC SEARCH (DNI or Affiliate) ---
@@ -1029,53 +1138,110 @@ function processUserQuery(query) {
     if (numberMatch) {
         const numStr = numberMatch[0];
 
-        // Search in DNI and Affiliate Status (which holds the affiliate number)
-        const found = globalAgents.filter(a => {
-            const dniMatch = a.dni && a.dni.toString().includes(numStr);
-            // Check affiliateStatus. Sometimes it is mixed text, so we check if it includes the number
-            const affMatch = a.affiliate_status && a.affiliate_status.toString().includes(numStr);
-            return dniMatch || affMatch;
-        });
+        try {
+            // First try searching by DNI
+            const dniRes = await fetch(`${API_URL}/agents/?dni=${numStr}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            let foundAgents = [];
 
-        if (found.length === 1) {
-            const agent = found[0];
-            const isDni = agent.dni && agent.dni.toString().includes(numStr);
-            const isAff = agent.affiliate_status && agent.affiliate_status.toString().includes(numStr);
+            if (dniRes.ok) {
+                const data = await dniRes.json();
+                // DRF pagination returns object with 'results', or list if not paginated.
+                // Our backend is paginated always now.
+                foundAgents = data.results || data;
+            }
 
-            let reason = "";
-            if (isDni && isAff) reason = "por DNI y Nro. de Afiliado";
-            else if (isDni) reason = "por DNI";
-            else if (isAff) reason = "por Nro. de Afiliado";
+            // If not found by DNI, try by Affiliate Number
+            if (foundAgents.length === 0) {
+                const affRes = await fetch(`${API_URL}/agents/?affiliate=${numStr}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (affRes.ok) {
+                    const data = await affRes.json();
+                    const affAgents = data.results || data;
+                    foundAgents = foundAgents.concat(affAgents);
+                }
+            }
 
-            openDetailsModal(agent.id);
-            return `¡Encontrado! Es **${agent.fullName}** (lo encontré ${reason}: ${numStr}).`;
+            // Deduplicate just in case (though unlikely to match same person with DNI=AffiliateNum)
+            let uniqueAgents = Array.from(new Map(foundAgents.map(a => [a.id, a])).values());
 
-        } else if (found.length > 1) {
-            renderFilteredAgents(found);
-            return `Encontré a **${found.length}** agentes que coinciden con el número **${numStr}** (en DNI o Afiliado). Mirá la tabla.`;
-        } else {
-            return `Busqué el número **${numStr}** como DNI y como Nro. de Afiliado, pero no encontré a nadie.`;
+            // Normalize for frontend
+            uniqueAgents = uniqueAgents.map(normalizeAgent);
+
+            if (uniqueAgents.length === 1) {
+                const agent = uniqueAgents[0];
+                openDetailsModal(agent.id); // This will fetch full details if needed, but we have the ID.
+                // Note: openDetailsModal might rely on globalAgents finding the ID. 
+                // If the agent is NOT in globalAgents, openDetailsModal usually fails unless we update it
+                // to accept an object OR fetch by ID. 
+                // Quick fix: Push to globalAgents temporarily or update openDetailsModal?
+                // Let's modify openDetailsModal to just fetch if not found locally?
+                // Or better: pass the agent object we just found to a new render function? 
+
+                // CRITICAL: openDetailsModal(id) searches globalAgents.
+                // We must ensure this agent is available to the modal.
+                // We can temporarily add it to globalAgents if missing.
+                if (!globalAgents.find(a => a.id === agent.id)) {
+                    globalAgents.push(agent);
+                }
+
+                openDetailsModal(agent.id);
+                return `¡Encontrado! Es **${agent.fullName}**.`;
+
+            } else if (uniqueAgents.length > 1) {
+                // Update table to show these results using the existing Search mechanism equivalent
+                // We can manually call renderFilteredAgents
+                renderFilteredAgents(uniqueAgents);
+                return `Encontré a **${uniqueAgents.length}** agentes. Mirá la tabla.`;
+            } else {
+                return `Busqué el número **${numStr}** como DNI y Afiliado en toda la base, pero no encontré nada.`;
+            }
+
+        } catch (e) {
+            console.error(e);
+            return "Tuve un error de conexión al buscar en la base de datos.";
         }
     }
 
     // --- SURNAME SEARCH (Single Word) ---
-    // If it's a single word and not a number, treat as Surname search
-    if (/^[a-zñáéíóúü]+$/i.test(lower)) {
-        const found = globalAgents.filter(a => {
-            // Normalize agent full name too
-            const agentNameNorm = normalizeString(a.fullName);
-            return agentNameNorm.includes(normalizedQuery);
-        });
+    // --- SURNAME SEARCH (Single or Multiple Words) ---
+    // If it not a number and has at least some letters, treat as Name search
+    if (/[a-zñáéíóúü]+/i.test(lower)) {
+        try {
+            const nameRes = await fetch(`${API_URL}/agents/?name=${query}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            let foundAgents = [];
 
-        if (found.length > 0) {
-            renderFilteredAgents(found);
-            if (found.length === 1) {
-                openDetailsModal(found[0].id);
-                return `Encontré a **${found[0].fullName}**. Aquí tenés su ficha.`;
+            if (nameRes.ok) {
+                const data = await nameRes.json();
+                foundAgents = data.results || data;
             }
-            return `Encontré a **${found.length}** agentes con el nombre/apellido "${query}".`;
-        } else {
-            return `No encontré a nadie con el apellido o nombre "${query}".`;
+
+            if (foundAgents.length > 0) {
+                // Normalize
+                foundAgents = foundAgents.map(normalizeAgent);
+
+                // Update table
+                renderFilteredAgents(foundAgents);
+
+                if (foundAgents.length === 1) {
+                    const agent = foundAgents[0];
+                    // Ensure modal finds it
+                    if (!globalAgents.find(a => a.id === agent.id)) globalAgents.push(agent);
+
+                    openDetailsModal(agent.id);
+                    return `Encontré a **${agent.fullName}**. Aquí tenés su ficha.`;
+                }
+                return `Encontré a **${foundAgents.length}** agentes que coinciden con "${query}". Mirá la tabla.`;
+            } else {
+                return `No encontré a nadie con el nombre "${query}".`;
+            }
+        } catch (e) {
+            console.error(e);
+            return "Tuve un error al buscar por nombre.";
         }
     }
 
@@ -1251,3 +1417,4 @@ window.prevPage = prevPage;
 window.searchAgents = searchAgents;
 window.resetSearch = resetSearch;
 window.handleSearchInput = handleSearchInput;
+window.exportAgents = exportAgents;

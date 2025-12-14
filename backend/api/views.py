@@ -88,6 +88,10 @@ class AgentViewSet(viewsets.ModelViewSet):
         affiliate = self.request.query_params.get('affiliate')
         if affiliate:
             queryset = queryset.filter(affiliate_status__icontains=affiliate)
+
+        ministry = self.request.query_params.get('ministry') # Filter by jurisdiction (Col M)
+        if ministry:
+            queryset = queryset.filter(ministry__icontains=ministry)
             
         return queryset.order_by('full_name') # Sort alphabetically by default as requested before
 
@@ -254,6 +258,67 @@ class AgentViewSet(viewsets.ModelViewSet):
             count, _ = Agent.objects.filter(user=request.user).delete()
             return Response({'message': f'Se eliminaron {count} agentes.'}, status=status.HTTP_200_OK)
         except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)            
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+    @action(detail=False, methods=['get'])
+    def export(self, request: Request) -> HttpResponse:
+        """
+        Exports the filtered agents to an Excel file.
+        """
+        import openpyxl
+        from django.http import HttpResponse
+
+        # 1. Get filtered queryset (reuse existing logic)
+        queryset = self.get_queryset()
+
+        # 2. Create Workbook
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Agentes Filtrados"
+
+        # 3. Headers
+        headers = [
+            'Nombre Completo', 'DNI', 'CUIL', 'Sexo', 'Fecha Nac.', 
+            'Fecha Retiro', 'Edad', 'Estado', 'Ley', 'Afiliado', 
+            'Ministerio', 'Repartición', 'Localidad', 'Antigüedad', 'Convenio'
+        ]
+        ws.append(headers)
+
+        # 4. Data Rows
+        from datetime import date
+        today = date.today()
+
+        for agent in queryset:
+            # Calculate Age
+            age = None
+            if agent.birth_date:
+                age = today.year - agent.birth_date.year - ((today.month, today.day) < (agent.birth_date.month, agent.birth_date.day))
+
+            # Format Status
+            status_label = agent.status.get('label') if isinstance(agent.status, dict) else str(agent.status)
+
+            ws.append([
+                agent.full_name,
+                agent.dni,
+                agent.cuil,
+                agent.gender,
+                agent.birth_date,
+                agent.retirement_date,
+                age,
+                status_label,
+                agent.law,
+                agent.affiliate_status,
+                agent.ministry,
+                agent.branch,
+                agent.location,
+                agent.seniority,
+                agent.agreement
+            ])
+
+        # 5. Response
+        response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        response['Content-Disposition'] = 'attachment; filename=agentes_filtrados.xlsx'
+        
+        wb.save(response)
+        return response            
+
