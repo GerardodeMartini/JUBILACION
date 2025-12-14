@@ -3,6 +3,12 @@
 from django.db import migrations, models
 
 
+
+def cleanup_duplicates(apps, schema_editor):
+    # Delete all agents to allow unique constraint application
+    Agent = apps.get_model('api', 'Agent')
+    Agent.objects.all().delete()
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -10,6 +16,7 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
+        migrations.RunPython(cleanup_duplicates),
         migrations.AlterField(
             model_name='agent',
             name='dni',
