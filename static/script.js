@@ -3,11 +3,9 @@ const RETIREMENT_AGE_FEMALE = 60;
 const RETIREMENT_AGE_MALE = 65;
 // Helper to determine API URL based on environment
 const getApiUrl = () => {
-    const host = window.location.hostname;
-    const port = window.location.port;
-    if ((host === 'localhost' || host === '127.0.0.1') && port !== '8000') {
-        return `http://${host}:8000/api`;
-    }
+    // Determine API URL based on current context
+    // In production (Railway), usage of window.location.origin is correct.
+    // In local dev, we now want to respect the port we are running on (8080 or 8000).
     return window.location.origin + '/api';
 };
 const API_URL = getApiUrl();
