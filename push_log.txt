@@ -1,0 +1,28 @@
+remote: error: GH013: Repository rule violations found for refs/heads/debug-deploy-check.        
+remote: 
+remote: - GITHUB PUSH PROTECTION        
+remote:   ÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇö        
+remote:     Resolve the following violations before pushing again        
+remote: 
+remote:     - Push cannot contain secrets        
+remote: 
+remote:             
+remote:      (?) Learn how to resolve a blocked push        
+remote:      https://docs.github.com/code-security/secret-scanning/working-with-secret-scanning-and-push-protection/working-with-push-protection-from-the-command-line#resolving-a-blocked-push        
+remote:             
+remote:             
+remote:       ÔÇöÔÇö Groq API Key ÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇö        
+remote:        locations:        
+remote:          - commit: 0528fa576990db9cb559542cde6e235fe5a5893c        
+remote:            path: backend/jubilacion_backend/settings.py:155        
+remote:          - commit: 0528fa576990db9cb559542cde6e235fe5a5893c        
+remote:            path: list_models.py:4        
+remote:             
+remote:        (?) To push, remove secret from commit(s) or follow this URL to allow the secret.        
+remote:        https://github.com/GerardodeMartini/JUBILACION/security/secret-scanning/unblock-secret/37A2xspbjwfQtoVoVg2e24aKiPa        
+remote:             
+remote: 
+remote: 
+To https://github.com/GerardodeMartini/JUBILACION.git
+ ! [remote rejected] HEAD -> debug-deploy-check (push declined due to repository rule violations)
+error: failed to push some refs to 'https://github.com/GerardodeMartini/JUBILACION.git'

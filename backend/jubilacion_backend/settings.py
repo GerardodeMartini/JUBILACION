@@ -143,6 +143,18 @@ ANYMAIL = {
 }
 DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='noreply@pilin.local')
 
+# Turnstile Configuration (CAPTCHA) - Verified Active
+# Default keys are Cloudflare's "Always Pass" test keys for development
+# IN PRODUCTION: Set these in your environment variables (e.g. Railway)
+# We use .strip() to remove accidental whitespace/newlines from copy-past
+# Security
+TURNSTILE_SITE_KEY = os.environ.get('TURNSTILE_SITE_KEY', '1x00000000000000000000AA')
+TURNSTILE_SECRET_KEY = os.environ.get('TURNSTILE_SECRET_KEY', '1x00000000000000000000AA')
+
+# LLM Configuration (Groq)
+GROQ_API_KEY = os.environ.get('GROQ_API_KEY', '')
+TURNSTILE_VERIFY_URL = 'https://challenges.cloudflare.com/turnstile/v0/siteverify'
+
 # DEBUG: Print Email Config to Console on Startup (Masked Password)
 if not DEBUG:
     print("--- EMAIL CONFIG DEBUG (ANYMAIL) ---")

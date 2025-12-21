@@ -1,7 +1,7 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import (
-    AgentViewSet, CustomTokenObtainPairView, RegisterView, ActivateAccountView
+    AgentViewSet, CustomTokenObtainPairView, RegisterView, ActivateAccountView, ChatView
 )
 
 router = DefaultRouter()
@@ -12,5 +12,6 @@ urlpatterns = [
     path('auth/register', RegisterView.as_view(), name='auth_register'),
     path('auth/activate/<str:uidb64>/<str:token>/', ActivateAccountView.as_view(), name='auth_activate'),
     # Token refresh if needed later: path('auth/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('chat/', ChatView.as_view(), name='chat'),
     path('', include(router.urls)),
 ]

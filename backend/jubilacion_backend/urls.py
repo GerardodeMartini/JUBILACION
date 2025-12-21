@@ -18,12 +18,17 @@ from django.contrib import admin
 from django.urls import path, include
 from django.views.generic import TemplateView
 
+from django.conf import settings
+
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('api.urls')),
-    path('', TemplateView.as_view(template_name='inicio.html'), name='home'),
-    path('inicio.html', TemplateView.as_view(template_name='inicio.html'), name='inicio'),
+    path('', TemplateView.as_view(template_name='inicio.html'), name='inicio'),
+    path('inicio.html', TemplateView.as_view(template_name='inicio.html'), name='inicio_html'),
     path('login.html', TemplateView.as_view(template_name='login.html'), name='login'),
     path('dashboard.html', TemplateView.as_view(template_name='dashboard.html'), name='dashboard'),
-    path('registro.html', TemplateView.as_view(template_name='registro.html'), name='registro'),
+    path('registro.html', TemplateView.as_view(
+        template_name='registro.html',
+        extra_context={'TURNSTILE_SITE_KEY': getattr(settings, 'TURNSTILE_SITE_KEY', '1x00000000000000000000AA')}
+    ), name='registro'),
 ]

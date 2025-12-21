@@ -12,3 +12,5 @@ djangorestframework-simplejwt
 python-decouple
 openpyxl
 django-anymail[resend]
+requests
+groq

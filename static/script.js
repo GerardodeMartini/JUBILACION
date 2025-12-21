@@ -110,6 +110,12 @@ window.addEventListener('DOMContentLoaded', () => {
             // Default View: Imminent Agents (100 per page as requested)
             currentStatusFilter = 'inminente';
             loadAgents(null, {}, 100);
+
+            // Hide Admin Actions if not admin
+            if (currentUser.role !== 'admin') {
+                const headerActions = document.querySelector('.header-actions');
+                if (headerActions) headerActions.style.display = 'none';
+            }
         }
     } else {
         // If not logged in and on dashboard, go to login
@@ -171,6 +177,9 @@ async function handleRegister(e) {
     const password = document.getElementById('register-password').value;
     const confirmPassword = document.getElementById('register-confirm-password').value;
 
+    // Get Turnstile Token
+    const turnstileToken = document.querySelector('[name="cf-turnstile-response"]')?.value;
+
     if (password !== confirmPassword) {
         alert('Las contraseñas no coinciden.');
         return;
@@ -184,7 +193,8 @@ async function handleRegister(e) {
                 username,
                 email,
                 password,
-                confirm_password: confirmPassword
+                confirm_password: confirmPassword,
+                turnstile_token: turnstileToken
             })
         });
 
@@ -231,7 +241,7 @@ function logout() {
     localStorage.removeItem('auth_user');
     globalAgents = [];
 
-    window.location.href = 'inicio.html';
+    window.location.href = '/';
 }
 
 // --- Helper Functions ---
@@ -1051,7 +1061,19 @@ function addMessage(text, sender) {
     const container = document.getElementById('chatbot-messages');
     const div = document.createElement('div');
     div.className = `message ${sender}`;
-    div.innerHTML = text.replace(/\n/g, '<br>');
+
+    // Parse Markdown Links: [text](url) -> <a href="url" target="_blank">text</a>
+    // Also parse plain https:// links if they aren't already part of a markdown link
+    let formattedText = text.replace(/\n/g, '<br>');
+
+    // 1. Replace [text](url)
+    formattedText = formattedText.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
+
+    // 2. Replace raw URLs (http/s) that are NOT inside quotation marks or HTML tags (basic heuristic)
+    // A simpler approach is just to handle the markdown ones since we control the prompt.
+    // But to be safe, we stick to the Markdown parser since we instructed the bot to use it.
+
+    div.innerHTML = formattedText;
     container.appendChild(div);
     container.scrollTop = container.scrollHeight;
 }
@@ -1096,325 +1118,116 @@ async function processUserQuery(query) {
     const normalizedQuery = normalizeString(query);
     const lower = query.toLowerCase().trim();
 
-    // --- PUBLIC MODE (No User Logged In) ---
-    if (!currentUser) {
-        if (lower.includes('hola') || lower.includes('buen')) {
-            return "¡Hola! ¿En qué puedo orientarte hoy?";
-        }
-        if (lower.includes('contacto') || lower.includes('telefono') || lower.includes('mail') || lower.includes('donde estan') || lower.includes('ubicacion')) {
-            return "Estamos en Santa Rosa. Podés llamarnos al 02954-452600 (Interno 1213) o escribir a legajospersonal@lapampa.gob.ar.";
-        }
-        if (lower.includes('ayuda') || lower.includes('que haces')) {
-            return "Soy PILIN. En esta versión pública puedo darte información de contacto. Para buscar agentes o ver estados de trámites, por favor iniciá sesión.";
+    // --- PRIVATE MODE COMMANDS (UI Control) ---
+    if (currentUser) {
+        // Command: Reset/Clean
+        if (lower.includes('reset') || lower.includes('limpiar') || lower.includes('todos') || lower.includes('borrar') || lower.includes('inicio') || lower.includes('volver') || lower.includes('lista') || lower.includes('original')) {
+            resetSearch();
+            return 'Listo jefe, tabla limpia.';
         }
 
-        // --- KNOWLEDGE BASE (Public) ---
-
-        // Retiro Especial / Ley 3581
-        if (normalizedQuery.includes('retiro especial') || normalizedQuery.includes('ley 3581') || normalizedQuery.includes('3581')) {
-            return `**Retiro Especial (Ley N° 3581):**<br><br>
-            Es para agentes que aún no tienen edad/aportes para la ordinaria. Se retiran con un % del sueldo (aprox. 60%) y siguen aportando hasta cumplir la edad legal.<br><br>
-            **Requisitos:**<br>
-            • Mujeres 55 años / Varones 60 años.<br>
-            • 30 años de aportes (mínimo 20 en ISS La Pampa).<br>
-            • Vigencia hasta 31/12/2027.<br><br>
-            <a href="https://dgp.lapampa.gob.ar/jubilaciones-especiales" target="_blank" style="color: var(--primary); text-decoration: underline;">Más información aquí</a>`;
+        // Command: Status Filters
+        if (lower.includes('inminente') || lower.includes('inminent')) {
+            filterByStatus('inminente');
+            return 'Filtrando por: **Inminentes** (< 6 meses).';
         }
-
-        // Jubilación por ANSES
-        if (normalizedQuery.includes('anses')) {
-            return `**Jubilación por ANSES:**<br><br>
-            Corresponde a quienes aportaron a la Caja Nacional. Requisito: 30 años de aportes y 60/65 años de edad.<br><br>
-            **Diferencia Clave:** Si tenés aportes en ISS y ANSES, se jubila por la "Caja Otorgante" (donde tengas más años). Al obtener este beneficio, cesa la relación de empleo provincial.<br><br>
-            <a href="https://dgp.lapampa.gob.ar/jubilacion-por-anses" target="_blank" style="color: var(--primary); text-decoration: underline;">Más información aquí</a>`;
+        if (lower.includes('vencido') || lower.includes('ya') || lower.includes('pasado')) {
+            filterByStatus('vencido');
+            return 'Filtrando por: **Vencidos**.';
         }
-
-        // Suplemento Especial Vitalicio / Invalidez
-        if (normalizedQuery.includes('suplemento') || normalizedQuery.includes('vitalicio') || normalizedQuery.includes('invalidez')) {
-            return `**Suplemento Especial Vitalicio:**<br><br>
-            Beneficio para agentes que ingresaron tarde a planta y no llegan a los 30 años de aportes. El Estado paga un plus para completar el haber.<br><br>
-            **Destinado a:** Ingresantes al ISS entre 2004-2007 o ex Ley 2343.<br>
-            **Requisitos:** 60/65 años de edad, 10 años de aportes al ISS y **no tener otra jubilación**.<br><br>
-            <a href="https://dgp.lapampa.gob.ar/jubilacion-anticipada" target="_blank" style="color: var(--primary); text-decoration: underline;">Más información aquí</a>`;
-        }
-
-        // Jubilación Ordinaria
-        if (normalizedQuery.includes('ordinaria')) {
-            return `**Jubilación Ordinaria:**<br><br>
-            Es el beneficio estándar al completar la carrera laboral.<br><br>
-            **Requisitos:**<br>
-            • Edad: 60 (mujeres) / 65 (hombres).<br>
-            • Aportes: 30 años computables.<br>
-            • **Caja Otorgante:** Mayor cantidad de aportes en ISS La Pampa (o 10 años mínimo si es la última).<br><br>
-            <a href="https://dgp.lapampa.gob.ar/jubilacion-ordinaria" target="_blank" style="color: var(--primary); text-decoration: underline;">Más información aquí</a>`;
-        }
-
-        // Catch-all for data queries in public mode
-        return "Para buscar personas, DNI o ver estados de trámites, necesitás **iniciar sesión**. Por seguridad, no puedo mostrar datos privados aquí.<br><br>Podés preguntarme sobre: *Ordinaria, Retiro Especial, ANSES o Suplemento Vitalicio*.";
-    }
-
-    // --- PRIVATE MODE (Dashboard) ---
-
-    // Command: Reset/Clean
-    if (lower.includes('reset') || lower.includes('limpiar') || lower.includes('todos') || lower.includes('borrar') || lower.includes('inicio') || lower.includes('volver') || lower.includes('lista') || lower.includes('original')) {
-        resetSearch(); // Use the dedicated reset function
-        return 'Listo jefe, volví a cargar la lista de Inminentes. Tabla limpia.';
-    }
-
-    // Command: Status Filters (Explicit)
-    if (lower.includes('inminente') || lower.includes('inminent')) {
-        filterByStatus('inminente');
-        return 'Filtrando por: **Inminentes** (< 6 meses).';
-    }
-    if (lower.includes('vencido') || lower.includes('ya') || lower.includes('pasado')) {
-        filterByStatus('vencido');
-        return 'Filtrando por: **Vencidos**. Estos ya deberían estar jubilados...';
-    }
-    if (lower.includes('proximo') || lower.includes('próximo') || lower.includes('cercano') || lower.includes('año')) {
-        filterByStatus('proximo');
-        return 'Filtrando por: **Próximos** (6 a 12 meses).';
-    }
-
-    // Command: Filter (Jurisdiction)
-    if (lower.includes('filtra') || lower.includes('ver los de') || lower.includes('busca los de') || lower.includes('mostrar') || lower.includes('jurisdiccion')) {
-        let term = '';
-        if (lower.includes('filtrame los de')) term = lower.split('filtrame los de')[1];
-        else if (lower.includes('filtra los de')) term = lower.split('filtra los de')[1];
-        else if (lower.includes('ver los de')) term = lower.split('ver los de')[1];
-        else if (lower.includes('busca los de')) term = lower.split('busca los de')[1];
-        else if (lower.includes('mostrar')) term = lower.split('mostrar')[1];
-
-        // If query is just "salud" or something direct
-        if (!term && !lower.includes(' ')) term = lower;
-
-        if (term) {
-            term = term.trim();
-
-            // Clear status filter to search globally
-            currentStatusFilter = null;
-            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-            // Optionally set 'Todos' active if you have a 'Todos' button, or just leave all inactive
-            // Assuming the first button might be 'Todos' or similar, but safely just unchecking all is fine.
-
-            // Call loadAgents with ministry filter
-            await loadAgents(null, { ministry: term }, 100);
-            return `Filtrando por jurisdicción/ministerio: "**${term}**". Mirá la tabla.`;
+        if (lower.includes('proximo') || lower.includes('cerca') || lower.includes('año')) {
+            filterByStatus('proximo');
+            return 'Filtrando por: **Próximos** (1 año).';
         }
     }
 
-    // --- SMART NUMERIC SEARCH (DNI or Affiliate) ---
-    // Matches if the query is a number of at least 4 digits
-    const numberMatch = lower.match(/^\d{4,}$/);
-    if (numberMatch) {
-        const numStr = numberMatch[0];
-
-        try {
-            // First try searching by DNI
-            const dniRes = await fetch(`${API_URL}/agents/?dni=${numStr}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            let foundAgents = [];
-
-            if (dniRes.ok) {
-                const data = await dniRes.json();
-                // DRF pagination returns object with 'results', or list if not paginated.
-                // Our backend is paginated always now.
-                foundAgents = data.results || data;
-            }
-
-            // If not found by DNI, try by Affiliate Number
-            if (foundAgents.length === 0) {
-                const affRes = await fetch(`${API_URL}/agents/?affiliate=${numStr}`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                if (affRes.ok) {
-                    const data = await affRes.json();
-                    const affAgents = data.results || data;
-                    foundAgents = foundAgents.concat(affAgents);
-                }
-            }
-
-            // Deduplicate just in case (though unlikely to match same person with DNI=AffiliateNum)
-            let uniqueAgents = Array.from(new Map(foundAgents.map(a => [a.id, a])).values());
-
-            // Normalize for frontend
-            uniqueAgents = uniqueAgents.map(normalizeAgent);
-
-            if (uniqueAgents.length === 1) {
-                const agent = uniqueAgents[0];
-                openDetailsModal(agent.id); // This will fetch full details if needed, but we have the ID.
-                // Note: openDetailsModal might rely on globalAgents finding the ID. 
-                // If the agent is NOT in globalAgents, openDetailsModal usually fails unless we update it
-                // to accept an object OR fetch by ID. 
-                // Quick fix: Push to globalAgents temporarily or update openDetailsModal?
-                // Let's modify openDetailsModal to just fetch if not found locally?
-                // Or better: pass the agent object we just found to a new render function? 
-
-                // CRITICAL: openDetailsModal(id) searches globalAgents.
-                // We must ensure this agent is available to the modal.
-                // We can temporarily add it to globalAgents if missing.
-                if (!globalAgents.find(a => a.id === agent.id)) {
-                    globalAgents.push(agent);
-                }
-
-                openDetailsModal(agent.id);
-                return `¡Encontrado! Es **${agent.fullName}**.`;
-
-            } else if (uniqueAgents.length > 1) {
-                // Update table to show these results using the existing Search mechanism equivalent
-                // We can manually call renderFilteredAgents
-                renderFilteredAgents(uniqueAgents);
-                return `Encontré a **${uniqueAgents.length}** agentes. Mirá la tabla.`;
-            } else {
-                return `Busqué el número **${numStr}** como DNI y Afiliado en toda la base, pero no encontré nada.`;
-            }
-
-        } catch (e) {
-            console.error(e);
-            return "Tuve un error de conexión al buscar en la base de datos.";
-        }
-    }
-
-    // --- SURNAME SEARCH (Single Word) ---
-    // --- SURNAME SEARCH (Single or Multiple Words) ---
-    // If it not a number and has at least some letters, treat as Name search
-    if (/[a-zñáéíóúü]+/i.test(lower)) {
-        try {
-            const nameRes = await fetch(`${API_URL}/agents/?name=${query}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            let foundAgents = [];
-
-            if (nameRes.ok) {
-                const data = await nameRes.json();
-                foundAgents = data.results || data;
-            }
-
-            if (foundAgents.length > 0) {
-                // Normalize
-                foundAgents = foundAgents.map(normalizeAgent);
-
-                // Update table
-                renderFilteredAgents(foundAgents);
-
-                if (foundAgents.length === 1) {
-                    const agent = foundAgents[0];
-                    // Ensure modal finds it
-                    if (!globalAgents.find(a => a.id === agent.id)) globalAgents.push(agent);
-
-                    openDetailsModal(agent.id);
-                    return `Encontré a **${agent.fullName}**. Aquí tenés su ficha.`;
-                }
-                return `Encontré a **${foundAgents.length}** agentes que coinciden con "${query}". Mirá la tabla.`;
-            } else {
-                return `No encontré a nadie con el nombre "${query}".`;
-            }
-        } catch (e) {
-            console.error(e);
-            return "Tuve un error al buscar por nombre.";
-        }
-    }
-
-    // --- Legacy Filters (Age/Seniority) ---
-    if (lower.includes('antigüedad') || lower.includes('años') || lower.includes('edad')) {
-        const numMatch = lower.match(/(\d+)/);
-        if (numMatch) {
-            const num = parseInt(numMatch[0], 10);
-            let filtered = [];
-            let msg = '';
-            // Determine if we are filtering by Seniority or Age
-            const isAge = lower.includes('edad');
-            const criteriaName = isAge ? 'edad' : 'antigüedad';
-
-            // Helper to get value based on criteria
-            const getValue = (a) => isAge ? (a.age || 0) : (parseInt(a.seniority) || 0);
-
-            if (lower.includes('mayor') || lower.includes('mas de') || lower.includes('más de')) {
-                filtered = globalAgents.filter(a => getValue(a) > num);
-                msg = `mayores a ${num} años (${criteriaName})`;
-            } else if (lower.includes('menor') || lower.includes('menos de')) {
-                filtered = globalAgents.filter(a => getValue(a) < num);
-                msg = `menores a ${num} años (${criteriaName})`;
-            } else {
-                filtered = globalAgents.filter(a => getValue(a) === num);
-                msg = `con exactamente ${num} años (${criteriaName})`;
-            }
-
-            if (filtered.length > 0) {
-                renderFilteredAgents(filtered);
-                return `Filtré por ${criteriaName}: encontré **${filtered.length}** agentes ${msg}.`;
-            } else {
-                return `No encontré a nadie con esa ${criteriaName} (${msg}).`;
-            }
-        }
-    }
-
-
-    // Command: Filter by Ministry/Jurisdiccion/Branch
-    if (lower.includes('filtrar') || lower.includes('busca en') || lower.includes('muestrame') || lower.includes('ver') || lower.includes('traeme')) {
-        let term = lower.replace('filtrar', '').replace('por', '').replace('busca en', '').replace('muestrame', '').replace('ver', '').replace('los de', '').replace('traeme', '').replace('a los', '').trim();
-
-        if (!term) return '¿A quiénes buscamos? Decime un sector, como "Salud" o "Vialidad".';
-
-        const filtered = globalAgents.filter(a => {
-            const t = term.toLowerCase();
-            return (
-                (a.ministry && a.ministry.toLowerCase().includes(t)) ||
-                (a.branch && a.branch.toLowerCase().includes(t)) ||
-                (a.location && a.location.toLowerCase().includes(t)) ||
-                (a.status && a.status.label.toLowerCase().includes(t))
-            );
+    // --- LLM (Groq) for everything else ---
+    try {
+        const mode = currentUser ? 'private' : 'public';
+        const res = await fetch(`${API_URL}/chat/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                message: query,
+                mode: mode
+            })
         });
 
-        if (filtered.length > 0) {
-            renderFilteredAgents(filtered);
-            return `¡Encontré a ${filtered.length} agentes en "${term}"! Ya te actualicé la tabla.`;
+        if (res.ok) {
+            const data = await res.json();
+
+            // Check if response is JSON-command (Private Mode)
+            if (currentUser) {
+                try {
+                    // LLM might return "Here is json: {...}", so we try to extract JSON
+                    let text = data.response;
+                    const jsonMatch = text.match(/\{[\s\S]*\}/);
+                    if (jsonMatch) {
+                        const cmd = JSON.parse(jsonMatch[0]);
+                        if (cmd.intent === 'command') {
+                            executeBotCommand(cmd);
+                            return cmd.reply || 'Ejecutando acción...';
+                        } else if (cmd.intent === 'message') {
+                            return cmd.reply;
+                        }
+                    }
+                } catch (e) {
+                    console.warn("Could not parse LLM JSON", e);
+                }
+            }
+
+            return data.response;
         } else {
-            return `Mmm... busqué por todos lados pero no encontré nada con "${term}". ¿Probamos otra cosa?`;
+            console.error('Chat API Error:', res.status);
+            return 'Lo siento, mi cerebro de IA está desconectado temporalmente. Intenta más tarde.';
+        }
+    } catch (e) {
+        console.error('Chat Network Error:', e);
+        return 'Error de conexión. Verifica tu internet.';
+    }
+}
+
+async function executeBotCommand(cmd) {
+    // Reset status filter for global search
+    currentStatusFilter = null;
+    currentFilters = {}; // Clear previous custom filters
+
+    // Update UI status badge if exists
+    const statusBadges = document.querySelectorAll('.filter-badge');
+    statusBadges.forEach(b => b.classList.remove('active'));
+
+    // 1. DNI Search
+    if (cmd.action === 'search_dni') {
+        const dniValue = cmd.value.trim();
+        // Trigger generic load with ONE filter: dni
+        // loadAgents handles url building. We pass null for url, and filter obj.
+        await loadAgents(null, { dni: dniValue });
+
+        // After loading, if we found it, open modal
+        // We know globalAgents is now the result of the filter
+        if (globalAgents.length > 0) {
+            openDetailsModal(globalAgents[0].id);
+        } else {
+            // Optional: reload all agents if not found so table isn't empty?
+            // Or just let user see empty table + alert.
+            // We will reload original list for better UX
+            alert('No se encontró nadie con ese DNI.');
+            resetSearch();
         }
     }
 
-    // Command: Count Status
-    if (lower.includes('cuantos') || lower.includes('cantidad') || lower.includes('hay')) {
-        let count = 0;
-        let type = '';
-
-        if (lower.includes('vencido')) {
-            count = globalAgents.filter(a => a.status.code === 'vencido').length;
-            type = 'que ya se tienen que jubilar (Vencidos)';
-        } else if (lower.includes('proximo') || lower.includes('próximo')) {
-            count = globalAgents.filter(a => a.status.code === 'proximo').length;
-            type = 'que les falta poco (Próximos)';
-        } else if (lower.includes('inminente')) {
-            count = globalAgents.filter(a => a.status.code === 'inminente').length;
-            type = 'a punto de salir (Inminentes)';
-        } else {
-            return '¿Qué cantidad querés saber? Probá "Cuántos vencidos hay" o "Cuántos próximos".';
-        }
-
-        return `Según mis cálculos, hay **${count}** agentes ${type}.`;
+    // 2. Filters (Jurisdiction, Agreement, Surname) - Global Backend Filters
+    else if (cmd.action === 'filter_jurisdiction') {
+        await loadAgents(null, { ministry: cmd.value });
     }
-
-    // Command: Search specific person
-    if (lower.includes('buscar a') || lower.includes('quien es') || lower.includes('buscame a')) {
-        const name = lower.replace('buscar a', '').replace('quien es', '').replace('buscame a', '').replace('por dni', '').trim();
-
-        if (!name || /^\d+$/.test(name)) return 'No entendí el nombre. Si querés buscar por DNI, escribí solo el número o "DNI [Numero]".';
-
-        const found = globalAgents.filter(a => a.fullName.toLowerCase().includes(name));
-
-        if (found.length === 1) {
-            openDetailsModal(found[0].id);
-            return `¡Acá está! Te abrí la ficha de ${found[0].fullName}.`;
-        } else if (found.length > 1) {
-            renderFilteredAgents(found);
-            return `Encontré a ${found.length} personas que coinciden con "${name}". Fijate en la tabla cuál es el que buscás.`;
-        } else {
-            return `No me suena "${name}" en este padrón. ¿Estará bien escrito el apellido?`;
-        }
+    else if (cmd.action === 'filter_agreement') {
+        await loadAgents(null, { agreement: cmd.value });
     }
-
-    return 'No entendí esa orden. Probá con:\n• "Buscame al DNI 12345678"\n• "Ver los de Salud"\n• "Edad mayor a 55"\n• "Reset"';
+    else if (cmd.action === 'filter_surname') {
+        await loadAgents(null, { surname: cmd.value });
+    }
 }
 
 function renderFilteredAgents(filteredList) {

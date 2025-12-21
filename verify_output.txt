@@ -1,0 +1,24 @@
+
+--- Public: Standard Info (Mode: public) ---
+User: C¾mo me jubilo?
+Bot: Para jubilarte, debes cumplir con los requisitos establecidos por el Instituto de Seguridad Social (ISS) de La Pampa. Puedes consultar la informaci¾n en el siguiente enlace: https://dgp.lapampa.gob.ar/jubilacion-ordinaria
+
+En general, debes tener al menos 65 a±os de edad y haber aportado al ISS durante un perÝodo determinado. TambiÚn debes cumplir con los requisitos de antig³edad y aportes mÝnimos.
+
+Te recomiendo consultar directamente con el ISS para obtener informaci¾n personalizada y verificar tus requisitos de jubilaci¾n.
+
+--- Public: Off-topic (Mode: public) ---
+User: Dame una receta de torta frita
+Bot: Lo siento, pero como asistente virtual experto en normativas de jubilaci¾n del Instituto de Seguridad Social (ISS) de La Pampa, no puedo proporcionarte recetas de comida. Mi funci¾n es ayudarte con informaci¾n sobre jubilaciones y trßmites del ISS. Si necesitas ayuda con alg·n tema relacionado con jubilaciones, estarÚ encantado de ayudarte.
+
+--- Public: Non-existent info (Mode: public) ---
+User: Cual es el trßmite para jubilarse como astronauta en La Pampa?
+Bot: Lo siento, pero no tengo informaci¾n sobre jubilaciones para astronautas en La Pampa. El Instituto de Seguridad Social (ISS) de La Pampa se enfoca en la jubilaci¾n de trabajadores que han contribuido a la seguridad social a travÚs de sus empleos. Si estßs buscando informaci¾n sobre jubilaciones, te recomiendo consultar el sitio web oficial del ISS de La Pampa o contactar directamente con ellos para obtener informaci¾n precisa y actualizada sobre los trßmites y requisitos para jubilarse.
+
+**Recuerda que puedo ayudarte con informaci¾n sobre jubilaciones y trßmites del ISS de La Pampa, pero no tengo conocimientos sobre temas fuera de mi ßrea de especializaci¾n.**
+
+Si necesitas ayuda con algo mßs, no dudes en preguntar.
+
+--- Private: Search Command (Mode: private) ---
+User: Buscame a Gomez
+Bot Raw: {"intent": "command", "action": "search_dni", "value": "Gomez", "reply": "Buscando a Gomez..."}

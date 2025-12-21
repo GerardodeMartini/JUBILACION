@@ -11,6 +11,8 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.db import transaction
 from .models import User, Agent
 from .serializers import UserSerializer, AgentSerializer
+from django.contrib.auth.models import Permission
+from django.contrib.contenttypes.models import ContentType
 
 # Custom Token Serializer to include user info in response
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
@@ -38,6 +40,8 @@ from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.contrib.auth.tokens import default_token_generator
 from django.shortcuts import redirect
 
+import requests
+
 class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
 
@@ -45,6 +49,47 @@ class RegisterView(generics.CreateAPIView):
     queryset = User.objects.all()
     permission_classes = (permissions.AllowAny,)
     serializer_class = UserSerializer
+
+    def create(self, request, *args, **kwargs):
+        # 1. Verify Turnstile CAPTCHA
+        token = request.data.get('turnstile_token')
+        
+        # In Production, failing to provide a token should be strictly blocked.
+        # Check settings to see if we are in a mode that requires it (implied by keys existence)
+        site_verify_url = getattr(settings, 'TURNSTILE_VERIFY_URL', 'https://challenges.cloudflare.com/turnstile/v0/siteverify')
+        secret_key = getattr(settings, 'TURNSTILE_SECRET_KEY', None)
+
+        if secret_key:
+            if not token:
+                return Response({'error': 'Por favor completa el desafío de seguridad (CAPTCHA).'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            try:
+                response = requests.post(site_verify_url, data={
+                    'secret': secret_key,
+                    'response': token,
+                    'remoteip': self.get_client_ip(request)
+                })
+                result = response.json()
+                
+                if not result.get('success'):
+                    return Response({
+                        'error': 'Error de validación de seguridad. Intente nuevamente.',
+                        'details': result.get('error-codes')
+                    }, status=status.HTTP_400_BAD_REQUEST)
+            except Exception as e:
+                print(f"Turnstile Error: {e}")
+                return Response({'error': 'Error interno validando seguridad.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        # 2. Proceed with user creation
+        return super().create(request, *args, **kwargs)
+
+    def get_client_ip(self, request):
+        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+        if x_forwarded_for:
+            ip = x_forwarded_for.split(',')[0]
+        else:
+            ip = request.META.get('REMOTE_ADDR')
+        return ip
 
     def perform_create(self, serializer):
         # Create inactive user
@@ -67,6 +112,17 @@ class RegisterView(generics.CreateAPIView):
             fail_silently=False,
         )
 
+        try:
+            # Grant View Permission for Agents and Staff Access
+            content_type = ContentType.objects.get_for_model(Agent)
+            view_permission = Permission.objects.get(codename='view_agent', content_type=content_type)
+            user.user_permissions.add(view_permission)
+            
+            user.is_staff = True
+            user.save()
+        except Exception as e:
+            print(f"Error granting permissions: {e}")
+
 class ActivateAccountView(views.APIView):
     permission_classes = (permissions.AllowAny,)
 
@@ -87,7 +143,17 @@ class ActivateAccountView(views.APIView):
 
 class AgentViewSet(viewsets.ModelViewSet):
     serializer_class = AgentSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = AgentSerializer
+    
+    def get_permissions(self):
+        """
+        Instantiates and returns the list of permissions that this view requires.
+        """
+        if self.action in ['create', 'update', 'partial_update', 'destroy', 'bulk', 'delete_all']:
+            permission_classes = [permissions.IsAdminUser]
+        else:
+            permission_classes = [permissions.IsAuthenticated]
+        return [permission() for permission in permission_classes]
 
     def get_queryset(self) -> QuerySet:
         """
@@ -95,7 +161,8 @@ class AgentViewSet(viewsets.ModelViewSet):
         Supports filtering by specific fields and status.
         """
         user = self.request.user
-        queryset = Agent.objects.filter(user=user).select_related('user')
+        # Shared DB: All authenticated users see all agents
+        queryset = Agent.objects.all().select_related('user')
         
         # Status Filter
         status_param = self.request.query_params.get('status')
@@ -122,6 +189,14 @@ class AgentViewSet(viewsets.ModelViewSet):
         ministry = self.request.query_params.get('ministry') # Filter by jurisdiction (Col M)
         if ministry:
             queryset = queryset.filter(ministry__icontains=ministry)
+
+        agreement = self.request.query_params.get('agreement') # Filter by Convention (Col I)
+        if agreement:
+            queryset = queryset.filter(agreement__icontains=agreement)
+
+        surname = self.request.query_params.get('surname') # Alias for name search
+        if surname:
+            queryset = queryset.filter(full_name__icontains=surname)
             
         return queryset.order_by('full_name') # Sort alphabetically by default as requested before
 
@@ -177,6 +252,9 @@ class AgentViewSet(viewsets.ModelViewSet):
                 # Normalize DNI same way as above
                 if dni:
                     dni = str(dni).strip()
+                    if dni in ['-', '']: # Skip invalid placeholders
+                        skipped_count += 1
+                        continue
 
                 # Deduplication Check
                 if dni and dni in existing_dnis:
@@ -351,4 +429,124 @@ class AgentViewSet(viewsets.ModelViewSet):
         
         wb.save(response)
         return response            
+
+from groq import Groq
+
+class ChatView(views.APIView):
+    permission_classes = [permissions.AllowAny] # Public chatbot
+
+    def post(self, request):
+        user_message = request.data.get('message')
+        mode = request.data.get('mode', 'public') # 'public' or 'private'
+
+        if not user_message:
+            return Response({'error': 'Message is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            client = Groq(
+                api_key=getattr(settings, 'GROQ_API_KEY', None),
+            )
+
+            # --- PROMPT STRATEGY ---
+            if mode == 'private':
+                # Dashboard Assistant (Agentic JSON Mode)
+                system_prompt = (
+                    "Sos 'PILIN', el asistente del Dashboard del sistema de jubilaciones. "
+                    "Tu función EXCLUSIVA es controlar la interfaz mediante comandos JSON. "
+                    "NO inventes datos. NO agregues explicaciones fuera del JSON. "
+                    "Si no entendés la orden, devolvé un JSON con intent='message' preguntando nuevamente. "
+                    "SIEMPRE debes responder con un JSON válido (sin markdown ```json). "
+                    "Formato de respuesta: {\"intent\": \"...\", \"action\": \"...\", \"value\": \"...\", \"reply\": \"...\"}\n"
+                    "INTENCIONES:\n"
+                    "1. 'command': Para ejecutar una acción.\n"
+                    "   - Buscar DNI: action='search_dni', value='12345678'\n"
+                    "   - Filtrar Jurisdicción: action='filter_jurisdiction', value='Salud' (o lo que pida).\n"
+                    "   - Filtrar Convenio: action='filter_agreement', value='Ley 643' (o lo que pida).\n"
+                    "   - Filtrar Apellido: action='filter_surname', value='Perez'.\n"
+                    "2. 'message': Para charlar sin acciones. reply='Texto de respuesta'.\n"
+                    "EJEMPLOS:\n"
+                    "- User: 'Busca al 20300400' -> {\"intent\": \"command\", \"action\": \"search_dni\", \"value\": \"20300400\", \"reply\": \"Buscando al agente...\"}\n"
+                    "- User: 'Mostrame salud' -> {\"intent\": \"command\", \"action\": \"filter_jurisdiction\", \"value\": \"Salud\", \"reply\": \"Filtrando por Salud.\"}\n"
+                    "- User: 'Hola' -> {\"intent\": \"message\", \"reply\": \"Hola, ¿qué buscás hoy?\"}"
+                )
+            else:
+                # Public Expert (Friendly but Restricted)
+                system_prompt = (
+                    "¡Hola! Soy 'PILIN', tu asistente virtual amigable del Instituto de Seguridad Social (ISS) de La Pampa. 🤖✨ "
+                    "Estoy aquí para brindarte INFORMACIÓN general sobre jubilaciones."
+                    "\n\n"
+                    "Mis capacidades son LIMITADAS a:\n"
+                    "1. Explicar requisitos de jubilaciones (Ordinaria, Invalidez, etc.).\n"
+                    "2. Proveer links a la normativa oficial.\n"
+                    "3. Responder saludos y preguntas básicas de cortesía.\n"
+                    "\n"
+                    "📕 RESPUESTAS ESPECÍFICAS (Usa este texto si preguntan por ANSES/Privados/Monotributo):\n"
+                    "  'Para jubilarte necesitás tener la edad (60 años las mujeres y 65 los varones) y 30 años de aportes. Si trabajaste en el sector privado, campo o sos monotributista, te corresponde ANSES.\n"
+                    "  ¿Cómo empezar? Primero, revisá tus aportes entrando a la página de ANSES con tu clave. Si te faltan años, no te preocupes: podés consultar por la Moratoria para completarlos.\n"
+                    "  ¿Dónde ir? El trámite es con turno previo. Una vez que lo tengas, presentate con tu DNI en la oficina de tu ciudad (Santa Rosa, General Pico, General Acha, Victorica o Realicó). Si sos mamá, no te olvides de llevar las partidas de nacimiento de tus hijos, porque te suman años de aporte.\n"
+                    "  Para más información: [🏢 Jubilación por Anses](https://dgp.lapampa.gob.ar/jubilacion-por-anses)'\n"
+                    "\n"
+                    "⛔ SI PREGUNTAN POR: 'Retiro Especial', 'Jubilación Anticipada', 'Anticipada' o 'Ley 3581' -> RESPONDE SOLO ESTO:\n"
+                    "  'Este sistema está diseñado para empleados que cuentan con los años de aportes necesarios pero aún no alcanzan la edad jubilatoria ordinaria. A continuación, te detallo los puntos clave:\n"
+                    "\n"
+                    "  1. Requisitos para acceder\n"
+                    "  Para solicitar este retiro, el agente debe cumplir con las siguientes condiciones:\n"
+                    "  - Edad mínima: 55 años para las mujeres y 60 años para los varones.\n"
+                    "  - Aportes: Registrar 30 años o más de servicios con aportes.\n"
+                    "  - Aportes en La Pampa: De esos 30 años, al menos 20 años deben haber sido aportados al Instituto de Seguridad Social (ISS) de La Pampa.\n"
+                    "  - Caja Otorgante: El ISS debe ser la caja otorgante de la prestación (donde se registra la mayor cantidad de aportes).\n"
+                    "\n"
+                    "  2. Monto del beneficio (Haber)\n"
+                    "  - Se garantiza que el monto no sea inferior al haber mínimo jubilatorio vigente.\n"
+                    "  - Se mantiene el derecho a percibir el Sueldo Anual Complementario (Aguinaldo) y los aumentos que se otorguen al sector pasivo.\n"
+                    "\n"
+                    "  Más información: [📜 Retiro Especial](https://dgp.lapampa.gob.ar/jubilaciones-especiales)'\n"
+                    "\n"
+                    "⛔ SI PREGUNTAN POR: 'Ley 2954', '2954' o 'Suplemento Especial Vitalicio' -> RESPONDE SOLO ESTO:\n"
+                    "  'El Suplemento Especial Vitalicio (Ley 2954) es un beneficio previsional específico de la provincia de La Pampa, diseñado para corregir una situación de \"injusticia previsional\" que afectaba a empleados públicos que ingresaron al Estado bajo modalidades de contratación especial y luego pasaron a planta permanente.\n"
+                    "\n"
+                    "  1. ¿A quiénes está dirigido?\n"
+                    "  El beneficio alcanza a los empleados públicos provinciales (y municipales de localidades adheridas) que:\n"
+                    "  - Ingresaron al régimen del Instituto de Seguridad Social (ISS) entre el 1 de enero de 2004 y el 31 de diciembre de 2007.\n"
+                    "  - Incluye también a quienes pasaron a planta mediante la Ley 2343 (ex pasantes o contratados).\n"
+                    "  - Excepciones: No aplica para los escalafones Docente, Judicial ni Policial.\n"
+                    "\n"
+                    "  Más información: [📜 Suplemento Especial Vitalicio](https://dgp.lapampa.gob.ar/jubilacion-anticipada)'\n"
+                    "\n"
+                    "🚫 LO QUE NO PUEDO HACER (Y NO DEBO OFRECER):\n"
+                    "- NO puedo consultar estado de trámites personales.\n"
+                    "- NO puedo completar documentos ni formularios.\n"
+                    "- NO puedo ver datos de agentes específicos.\n"
+                    "\n"
+                    "Enlaces útiles (USA FORMATO MARKDOWN `[Titulo](URL)` para que sean clicables):\n"
+                    "- [👵 Jubilación Ordinaria](https://dgp.lapampa.gob.ar/jubilacion-ordinaria)\n"
+                    "- [♿ Jubilación por Invalidez](https://dgp.lapampa.gob.ar/jubilacion-anticipada)\n"
+                    "- [⏳ Jubilación Anticipada](https://dgp.lapampa.gob.ar/jubilacion-anticipada)\n"
+                    "- [📜 Suplemento Especial Vitalicio](https://dgp.lapampa.gob.ar/jubilacion-anticipada)\n"
+                    "- [🏢 Jubilación por Anses](https://dgp.lapampa.gob.ar/jubilacion-por-anses)\n\n"
+                    "⚠️ REGLA DE ORO: JAMÁS pongas enlaces a `www.anses.gob.ar` ni otros sitios nacionales. SOLO usa los enlaces de `dgp.lapampa.gob.ar` listados arriba. \n"
+                    "⚠️ RESTRICCIÓN FINAL: SI LA PREGUNTA COINCIDE CON UN TEMA 'RESPUESTA ESPECÍFICA', USA EL TEXTO LITERAL. NO CAMBIES NI UNA COMA. NO AGREGUES SALUDOS INNECESARIOS AL FINAL."
+                )
+
+            chat_completion = client.chat.completions.create(
+                messages=[
+                    {
+                        "role": "system",
+                        "content": system_prompt
+                    },
+                    {
+                        "role": "user",
+                        "content": user_message
+                    }
+                ],
+                model="llama-3.1-8b-instant",
+                temperature=0.0, # ZERO temperature for maximum determinism
+            )
+
+            bot_reply = chat_completion.choices[0].message.content
+            return Response({'response': bot_reply})
+
+        except Exception as e:
+            print(f"Groq API Error: {e}")
+            return Response({'response': 'Lo siento, tuve un problema conectando con mi cerebro digital. ¿Podrías intentar de nuevo?'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 

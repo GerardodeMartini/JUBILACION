@@ -35,6 +35,8 @@
             padding: 2rem;
         }
     </style>
+    <!-- Turnstile CAPTCHA -->
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 </head>
 
 <body>
@@ -80,6 +82,11 @@
                         </button>
                     </div>
                 </div>
+
+                <!-- Turnstile Widget (Dynamic Key) -->
+                <div class="cf-turnstile" data-sitekey="{{ TURNSTILE_SITE_KEY }}"
+                    style="margin-bottom: 1rem; display: flex; justify-content: center;"></div>
+
                 <button type="submit" class="btn-primary" style="width: 100%;">Registrarse</button>
             </form>
             <div
