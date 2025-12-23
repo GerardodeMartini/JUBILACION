@@ -183,6 +183,17 @@ async function handleRegister(e) {
         return;
     }
 
+    // Password Complexity Validation
+    const hasUpperCase = /[A-Z]/.test(password);
+    const hasNumber = /\d/.test(password);
+    const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+    const isLongEnough = password.length >= 6;
+
+    if (!isLongEnough || !hasUpperCase || !hasNumber || !hasSpecialChar) {
+        alert('La contraseña debe tener al menos: 6 caracteres, una mayúscula, un número y un carácter especial.');
+        return;
+    }
+
     try {
         const res = await fetch(`${API_URL}/auth/register`, {
             method: 'POST',
