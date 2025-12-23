@@ -1483,3 +1483,26 @@ select:focus {
         padding-bottom: max(1rem, env(safe-area-inset-bottom));
     }
 }
+
+/* Mobile Fixes for Layout and Turnstile */
+@media (max-width: 480px) {
+
+    .login-container,
+    .upload-card {
+        padding: 1rem !important;
+        width: 100%;
+    }
+
+    /* Force widget container to not overflow */
+    .cf-turnstile {
+        max-width: 100%;
+        display: flex;
+        justify-content: center;
+        overflow: hidden;
+    }
+
+    /* Ensure body doesn't force too much padding on small screens */
+    body {
+        padding: 1rem;
+    }
+}
