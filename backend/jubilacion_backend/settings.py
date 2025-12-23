@@ -148,8 +148,8 @@ DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='noreply@pilin.local')
 # IN PRODUCTION: Set these in your environment variables (e.g. Railway)
 # We use .strip() to remove accidental whitespace/newlines from copy-past
 # Security
-TURNSTILE_SITE_KEY = os.environ.get('TURNSTILE_SITE_KEY', '1x00000000000000000000AA')
-TURNSTILE_SECRET_KEY = os.environ.get('TURNSTILE_SECRET_KEY', '1x00000000000000000000AA')
+TURNSTILE_SITE_KEY = os.environ.get('TURNSTILE_SITE_KEY', '1x00000000000000000000AA').strip()
+TURNSTILE_SECRET_KEY = os.environ.get('TURNSTILE_SECRET_KEY', '1x00000000000000000000AA').strip()
 
 # LLM Configuration (Groq)
 GROQ_API_KEY = os.environ.get('GROQ_API_KEY', '')
