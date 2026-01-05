@@ -36,3 +36,26 @@ class Agent(models.Model):
             import uuid
             self.id = uuid.uuid4()
         super().save(*args, **kwargs)
+
+class SecurityLog(models.Model):
+    ACTION_CHOICES = (
+        ('LOGIN_SUCCESS', 'Login Exitoso'),
+        ('LOGIN_FAIL', 'Login Fallido'),
+        ('EXPORT', 'Exportación Excel'),
+        ('BULK_IMPORT', 'Importación Masiva'),
+        ('DELETE_ALL', 'Eliminación Masiva'),
+        ('PASSWORD_CHANGE', 'Cambio de Contraseña'),
+    )
+    
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    action = models.CharField(max_length=50, choices=ACTION_CHOICES)
+    details = models.TextField(blank=True, null=True)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-timestamp']
+
+    def __str__(self):
+        username = self.user.username if self.user else 'Anon'
+        return f"{self.timestamp} - {username} - {self.action}"

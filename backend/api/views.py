@@ -9,8 +9,9 @@ from rest_framework.exceptions import ValidationError
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.db import transaction
-from .models import User, Agent
+from .models import User, Agent, SecurityLog
 from .serializers import UserSerializer, AgentSerializer
+from rest_framework.throttling import ScopedRateThrottle
 from django.contrib.auth.models import Permission
 from django.contrib.contenttypes.models import ContentType
 
@@ -44,11 +45,39 @@ import requests
 
 class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = 'login'
+
+    def post(self, request, *args, **kwargs):
+        response = super().post(request, *args, **kwargs)
+        
+        # Audit Log
+        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+        ip = x_forwarded_for.split(',')[0] if x_forwarded_for else request.META.get('REMOTE_ADDR')
+        
+        if response.status_code == 200:
+            user = User.objects.get(username=request.data.get('username'))
+            SecurityLog.objects.create(
+                user=user,
+                action='LOGIN_SUCCESS',
+                ip_address=ip,
+                details=f"User {user.username} logged in."
+            )
+        else:
+            SecurityLog.objects.create(
+                user=None, # Cannot trust username in failed attempt
+                action='LOGIN_FAIL',
+                ip_address=ip,
+                details=f"Failed login attempt for username: {request.data.get('username')}"
+            )
+        return response
 
 class RegisterView(generics.CreateAPIView):
     queryset = User.objects.all()
     permission_classes = (permissions.AllowAny,)
     serializer_class = UserSerializer
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = 'register'
 
     def create(self, request, *args, **kwargs):
         # 1. Verify Turnstile CAPTCHA
@@ -313,6 +342,18 @@ class AgentViewSet(viewsets.ModelViewSet):
             if errors:
                 msg += f" Errores varios: {len(errors)} (ver consola)."
             
+
+
+            # Audit Log
+            x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+            ip = x_forwarded_for.split(',')[0] if x_forwarded_for else request.META.get('REMOTE_ADDR')
+            SecurityLog.objects.create(
+                user=request.user,
+                action='BULK_IMPORT',
+                ip_address=ip,
+                details=f"Created: {created_count}. Skipped: {skipped_count}. Errors: {len(errors)}"
+            )
+            
             return Response({
                 'message': msg,
                 'created': created_count,
@@ -364,6 +405,17 @@ class AgentViewSet(viewsets.ModelViewSet):
         """
         try:
             count, _ = Agent.objects.filter(user=request.user).delete()
+            
+            # Audit Log
+            x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+            ip = x_forwarded_for.split(',')[0] if x_forwarded_for else request.META.get('REMOTE_ADDR')
+            SecurityLog.objects.create(
+                user=request.user,
+                action='DELETE_ALL',
+                ip_address=ip,
+                details=f"Deleted {count} agents."
+            )
+            
             return Response({'message': f'Se eliminaron {count} agentes.'}, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -428,12 +480,25 @@ class AgentViewSet(viewsets.ModelViewSet):
         response['Content-Disposition'] = 'attachment; filename=agentes_filtrados.xlsx'
         
         wb.save(response)
+
+        # Audit Log
+        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+        ip = x_forwarded_for.split(',')[0] if x_forwarded_for else request.META.get('REMOTE_ADDR')
+        SecurityLog.objects.create(
+            user=self.request.user,
+            action='EXPORT',
+            ip_address=ip,
+            details=f"Exported {queryset.count()} agents."
+        )
+
         return response            
 
 from groq import Groq
 
 class ChatView(views.APIView):
     permission_classes = [permissions.AllowAny] # Public chatbot
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = 'chat'
 
     def post(self, request):
         user_message = request.data.get('message')
