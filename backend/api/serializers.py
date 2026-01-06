@@ -1,6 +1,7 @@
 from typing import Any, Dict
 from rest_framework import serializers
 from .models import User, Agent
+from django.contrib.auth.password_validation import validate_password
 
 class UserSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(required=True)
@@ -13,9 +14,15 @@ class UserSerializer(serializers.ModelSerializer):
         fields = ('id', 'username', 'email', 'role', 'password', 'confirm_password', 'first_name', 'last_name')
         extra_kwargs = {'password': {'write_only': True}}
 
+
     def validate(self, data):
         if data['password'] != data['confirm_password']:
             raise serializers.ValidationError({"password": "Las contraseñas no coinciden."})
+        
+        # Enforce password complexity
+        user = User(**data) if not self.instance else self.instance
+        validate_password(data['password'], user)
+        
         return data
 
     def create(self, validated_data: Dict[str, Any]) -> User:
