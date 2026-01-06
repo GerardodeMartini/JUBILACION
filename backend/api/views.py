@@ -236,8 +236,7 @@ class AgentViewSet(viewsets.ModelViewSet):
         Returns global statistics for the user's agents.
         Used to populate dashboard counters independently of pagination.
         """
-        user = self.request.user
-        queryset = Agent.objects.filter(user=user)
+        queryset = Agent.objects.all()
         
         total = queryset.count()
         vencido = queryset.filter(status__code='vencido').count()
