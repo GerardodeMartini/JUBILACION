@@ -20,7 +20,9 @@ class UserSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({"password": "Las contraseñas no coinciden."})
         
         # Enforce password complexity
-        user = User(**data) if not self.instance else self.instance
+        user_data = data.copy()
+        user_data.pop('confirm_password', None)
+        user = User(**user_data) if not self.instance else self.instance
         validate_password(data['password'], user)
         
         return data
