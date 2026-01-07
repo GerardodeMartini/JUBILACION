@@ -131,7 +131,38 @@ window.addEventListener('DOMContentLoaded', () => {
         // Clean URL
         window.history.replaceState({}, document.title, window.location.pathname);
     }
+
+    // --- Inactivity Timer ---
+    if (token) {
+        setupInactivityTimer();
+    }
 });
+
+let inactivityTimer;
+const INACTIVITY_LIMIT = 10 * 60 * 1000; // 10 Minutes
+
+function setupInactivityTimer() {
+    // Reset timer on any interaction
+    window.onload = resetInactivityTimer;
+    document.onmousemove = resetInactivityTimer;
+    document.onkeydown = resetInactivityTimer;
+    document.onclick = resetInactivityTimer;
+    document.onscroll = resetInactivityTimer;
+    document.ontouchstart = resetInactivityTimer;
+
+    // Start initial timer
+    resetInactivityTimer();
+}
+
+function resetInactivityTimer() {
+    clearTimeout(inactivityTimer);
+    inactivityTimer = setTimeout(doInactivityLogout, INACTIVITY_LIMIT);
+}
+
+function doInactivityLogout() {
+    alert('Tu sesión ha expirado por inactividad.');
+    logout();
+}
 
 // --- Auth Functions ---
 
