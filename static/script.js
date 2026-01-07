@@ -1,12 +1,35 @@
 // Constants
 const RETIREMENT_AGE_FEMALE = 60;
 const RETIREMENT_AGE_MALE = 65;
+
+// Helper to get CSRF Token
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
 // Helper to determine API URL based on environment
 const getApiUrl = () => {
     // Determine API URL based on current context
-    // In production (Railway), usage of window.location.origin is correct.
-    // In local dev, we now want to respect the port we are running on (8080 or 8000).
-    return window.location.origin + '/api';
+    const origin = window.location.origin;
+
+    // If running from file:// or empty origin (unlikely in normal browser usage but possible in some views)
+    if (!origin || origin === 'null' || origin.startsWith('file://')) {
+        return 'http://127.0.0.1:8000/api';
+    }
+
+    // Standard web context
+    return origin + '/api';
 };
 const API_URL = getApiUrl();
 console.log('Jubilacion API_URL:', API_URL);
@@ -176,9 +199,12 @@ async function handleLogin(e) {
     const password = document.getElementById('login-password').value;
 
     try {
-        const res = await fetch(`${API_URL}/auth/login`, {
+        const res = await fetch(`${API_URL}/auth/login/`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
             body: JSON.stringify({ username, password })
         });
 
@@ -226,9 +252,12 @@ async function handleRegister(e) {
     }
 
     try {
-        const res = await fetch(`${API_URL}/auth/register`, {
+        const res = await fetch(`${API_URL}/auth/register/`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
             body: JSON.stringify({
                 username,
                 email,
@@ -566,7 +595,8 @@ async function analyzeData(data) {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
+                    'Authorization': `Bearer ${token}`,
+                    'X-CSRFToken': getCookie('csrftoken')
                 },
                 body: JSON.stringify(agentsToUpload)
             });
@@ -588,9 +618,6 @@ async function analyzeData(data) {
         alert('No se encontraron agentes válidos para importar.');
     }
 }
-
-// --- Persistence (API) ---
-
 
 // --- Persistence (API) ---
 
@@ -632,7 +659,10 @@ async function loadAgents(url = null, filters = {}, pageSize = 100) {
 
     try {
         const res = await fetch(fetchUrl, {
-            headers: { 'Authorization': `Bearer ${token}` }
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'X-CSRFToken': getCookie('csrftoken')
+            }
         });
         if (res.ok) {
             const data = await res.json();
@@ -720,7 +750,10 @@ async function exportAgents() {
     try {
         // Use fetch with Auth header instead of window.location.href
         const res = await fetch(exportUrl, {
-            headers: { 'Authorization': `Bearer ${token}` }
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'X-CSRFToken': getCookie('csrftoken')
+            }
         });
 
         if (res.ok) {
@@ -789,7 +822,10 @@ function handleSearchInput(event) {
 async function fetchStats() {
     try {
         const res = await fetch(`${API_URL}/agents/stats/`, {
-            headers: { 'Authorization': `Bearer ${token}` }
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'X-CSRFToken': getCookie('csrftoken')
+            }
         });
         if (res.ok) {
             const stats = await res.json();
@@ -878,7 +914,10 @@ async function clearAllData() {
         try {
             const res = await fetch(`${API_URL}/agents/delete_all/`, {
                 method: 'DELETE',
-                headers: { 'Authorization': `Bearer ${token}` }
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
             });
 
             if (res.ok) {
@@ -901,7 +940,10 @@ async function deleteAgent(id, reload = true) {
         try {
             const res = await fetch(`${API_URL}/agents/${id}/`, {
                 method: 'DELETE',
-                headers: { 'Authorization': `Bearer ${token}` }
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
             });
             if (res.ok) {
                 if (reload) loadAgents();
@@ -969,7 +1011,8 @@ async function handleManualAdd(e) {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
+                'Authorization': `Bearer ${token}`,
+                'X-CSRFToken': getCookie('csrftoken')
             },
             body: JSON.stringify({
                 fullName,
@@ -1187,7 +1230,8 @@ async function processUserQuery(query) {
         const res = await fetch(`${API_URL}/chat/`, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
             },
             body: JSON.stringify({
                 message: query,

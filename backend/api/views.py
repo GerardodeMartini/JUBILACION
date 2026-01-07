@@ -30,7 +30,13 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         data = super().validate(attrs)
         data['token'] = data.pop('access')
         data['username'] = self.user.username  # type: ignore
-        data['role'] = self.user.role  # type: ignore
+        
+        # Ensure superusers always have admin privileges in frontend
+        if self.user.is_superuser:
+            data['role'] = 'admin'
+        else:
+            data['role'] = self.user.role  # type: ignore
+            
         return data
 
 from django.core.mail import send_mail
@@ -234,14 +240,40 @@ class AgentViewSet(viewsets.ModelViewSet):
     def stats(self, request: Request) -> Response:
         """
         Returns global statistics for the user's agents.
-        Used to populate dashboard counters independently of pagination.
+        Calculates status in Python to ensure compatibility across all DBs (SQLite/Postgres).
         """
         queryset = Agent.objects.all()
         
-        total = queryset.count()
-        vencido = queryset.filter(status__code='vencido').count()
-        proximo = queryset.filter(status__code='proximo').count()
-        inminente = queryset.filter(status__code='inminente').count()
+        # Fetch all agents to count in memory (robust against SQLite JSON limitations)
+        # Note: If database grows very large (>10k), this should be optimized back to DB-level queries 
+        # with proper Postgres JSONB support. For now, this fixes the "0 stats" bug.
+        
+        all_agents = list(queryset)
+        total = len(all_agents)
+        vencido = 0
+        proximo = 0
+        inminente = 0
+        
+        for agent in all_agents:
+            # Check if status is a dict (standard) or string (legacy)
+            s_code = ''
+            if isinstance(agent.status, dict):
+                s_code = agent.status.get('code', '')
+            else:
+                # Fallback if stored as string
+                import json
+                try:
+                    s_dict = json.loads(agent.status)
+                    s_code = s_dict.get('code', '')
+                except:
+                    s_code = str(agent.status)
+            
+            if s_code == 'vencido':
+                vencido += 1
+            elif s_code == 'proximo':
+                proximo += 1
+            elif s_code == 'inminente':
+                inminente += 1
         
         return Response({
             'total': total,
