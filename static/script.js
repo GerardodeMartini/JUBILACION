@@ -850,6 +850,17 @@ function updateStats() {
     fetchStats();
 }
 
+// XSS Prevention Helper
+function escapeHtml(text) {
+    if (text === null || text === undefined) return '';
+    return String(text)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
 function renderDashboard() {
     const dashboardSection = document.getElementById('dashboard-section');
     const tableBody = document.getElementById('table-body');
@@ -882,25 +893,26 @@ function renderDashboard() {
             rDateStr = rDate.toLocaleDateString('es-AR');
         }
 
+        // Secure rendering using escapeHtml
         row.innerHTML = `
             <td>${(currentPage - 1) * currentPageSize + index + 1}</td>
             <td>
-                <div style="font-weight: 500; cursor: pointer; color: var(--primary);" onclick="openDetailsModal('${agent.id}')">
-                    ${agent.fullName}
+                <div style="font-weight: 500; cursor: pointer; color: var(--primary);" onclick="openDetailsModal('${escapeHtml(agent.id)}')">
+                    ${escapeHtml(agent.fullName)}
                 </div>
             </td>
-            <td>${birthDateStr}</td>
-            <td>${agent.age !== null ? agent.age + ' años' : '-'}</td>
-            <td>${agent.gender}</td>
-            <td>${agent.seniority || '-'}</td>
-            <td>${rDateStr}</td>
+            <td>${escapeHtml(birthDateStr)}</td>
+            <td>${agent.age !== null ? escapeHtml(agent.age) + ' años' : '-'}</td>
+            <td>${escapeHtml(agent.gender)}</td>
+            <td>${escapeHtml(agent.seniority || '-')}</td>
+            <td>${escapeHtml(rDateStr)}</td>
             <td>
-                <span class="status-badge status-${agent.status.code}">
-                    ${agent.status.label}
+                <span class="status-badge status-${escapeHtml(agent.status.code)}">
+                    ${escapeHtml(agent.status.label)}
                 </span>
             </td>
             <td>
-                <button class="btn-secondary btn-danger" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;" onclick="deleteAgent('${agent.id}')">
+                <button class="btn-secondary btn-danger" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;" onclick="deleteAgent('${escapeHtml(agent.id)}')">
                     <i class="ph ph-trash"></i>
                 </button>
             </td>
@@ -1328,22 +1340,22 @@ function renderFilteredAgents(filteredList) {
         row.innerHTML = `
             <td>${index + 1}</td>
             <td>
-                <div style="font-weight: 500; cursor: pointer; color: var(--primary);" onclick="openDetailsModal('${agent.id}')">
-                    ${agent.fullName}
+                <div style="font-weight: 500; cursor: pointer; color: var(--primary);" onclick="openDetailsModal('${escapeHtml(agent.id)}')">
+                    ${escapeHtml(agent.fullName)}
                 </div>
             </td>
-            <td>${birthDateStr}</td>
-            <td>${agent.age !== null ? agent.age + ' años' : '-'}</td>
-            <td>${agent.gender}</td>
-            <td>${agent.seniority || '-'}</td>
-            <td>${rDateStr}</td>
+            <td>${escapeHtml(birthDateStr)}</td>
+            <td>${agent.age !== null ? escapeHtml(agent.age) + ' años' : '-'}</td>
+            <td>${escapeHtml(agent.gender)}</td>
+            <td>${escapeHtml(agent.seniority || '-')}</td>
+            <td>${escapeHtml(rDateStr)}</td>
             <td>
-                <span class="status-badge status-${agent.status.code}">
-                    ${agent.status.label}
+                <span class="status-badge status-${escapeHtml(agent.status.code)}">
+                    ${escapeHtml(agent.status.label)}
                 </span>
             </td>
             <td>
-                <button class="btn-secondary btn-danger" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;" onclick="deleteAgent('${agent.id}')">
+                <button class="btn-secondary btn-danger" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;" onclick="deleteAgent('${escapeHtml(agent.id)}')">
                     <i class="ph ph-trash"></i>
                 </button>
             </td>
