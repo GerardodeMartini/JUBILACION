@@ -458,7 +458,7 @@ async function analyzeData(data) {
         // --- Gender ---
         const genderRaw = (idxGender !== -1 && row[idxGender]) ? row[idxGender] : 'M';
         const genderUpper = String(genderRaw).toUpperCase().trim();
-        const gender = (genderUpper.startsWith('F') || genderUpper.startsWith('M')) ? genderUpper.charAt(0) : 'M';
+        let gender = (genderUpper.startsWith('F') || genderUpper.startsWith('M')) ? genderUpper.charAt(0) : 'M';
 
         // --- Birth Date ---
         let birthDateRaw = (idxBirth !== -1) ? row[idxBirth] : null;
@@ -530,6 +530,17 @@ async function analyzeData(data) {
 
         // CUIL
         const cuilVal = (idxCuil !== -1 && row[idxCuil]) ? row[idxCuil] : '';
+
+        // FIX: Infer Gender from CUIL if available (Overwrites default 'M' if CUIL says 'F')
+        // Helpful when Gender column is missing.
+        if (cuilVal) {
+            const sCuil = String(cuilVal).trim();
+            if (sCuil.startsWith('27')) {
+                gender = 'F';
+            } else if (sCuil.startsWith('20')) {
+                gender = 'M';
+            }
+        }
 
         // Antiguedad
         const seniorityVal = (idxSeniority !== -1 && row[idxSeniority]) ? row[idxSeniority] : '-';
