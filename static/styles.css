@@ -1,22 +1,30 @@
 :root {
-    /* Modern Palette - Clean & Professional */
-    --primary: #4f46e5;
+    /* Modern Palette - Indigo & Violet */
+    --primary: #6366f1;
+    /* Indigo 500 */
+    --primary-hover: #4f46e5;
     /* Indigo 600 */
-    --primary-hover: #4338ca;
-    /* Indigo 700 */
-    --secondary: #64748b;
-    /* Slate 500 */
+    --accent: #8b5cf6;
+    /* Violet 500 */
 
-    --bg-body: #f1f5f9;
-    /* Slate 100 */
-    --bg-card: #ffffff;
-
-    --text-main: #0f172a;
+    --bg-body: #0f172a;
     /* Slate 900 */
+
+    /* Glassmorphism Variables */
+    --glass-bg: rgba(255, 255, 255, 0.1);
+    --glass-border: rgba(255, 255, 255, 0.2);
+    --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+    --glass-text: #f8fafc;
+    --glass-text-muted: #cbd5e1;
+
+    --text-main: #1e293b;
+    /* Slate 800 - For inside white cards if needed */
+    --text-light: #f1f5f9;
+    /* Slate 100 */
     --text-muted: #64748b;
     /* Slate 500 */
-    --border: #e2e8f0;
-    /* Slate 200 */
+
+    --border: rgba(255, 255, 255, 0.1);
 
     /* Status Colors */
     --status-vencido-bg: #fee2e2;
@@ -28,17 +36,12 @@
     --status-lejos-bg: #f1f5f9;
     --status-lejos-text: #475569;
 
-    /* Effects */
-    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -2px rgb(0 0 0 / 0.05);
-    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
-
     --radius-sm: 0.5rem;
     --radius-md: 0.75rem;
     --radius-lg: 1rem;
+    --radius-xl: 1.5rem;
 
-    --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 * {
@@ -50,14 +53,75 @@
 body {
     font-family: 'Inter', sans-serif;
     background-color: var(--bg-body);
+    /* Custom User Background - No Overlay */
+    background-image: url('/static/img/custom_bg.jpg');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
     color: var(--text-main);
     line-height: 1.6;
     min-height: 100vh;
     display: flex;
     justify-content: center;
     padding: 2rem;
-    background-image: radial-gradient(#e2e8f0 1px, transparent 1px);
-    background-size: 24px 24px;
+}
+
+/* Glass Utility Classes */
+.glass-card {
+    background: var(--glass-bg);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow);
+    border-radius: var(--radius-xl);
+    color: var(--glass-text);
+}
+
+.glass-input {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--glass-border);
+    color: white;
+    padding: 1rem;
+    border-radius: var(--radius-md);
+    transition: var(--transition);
+}
+
+.glass-input::placeholder {
+    color: var(--glass-text-muted);
+}
+
+.glass-input:focus {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: var(--primary);
+    outline: none;
+    box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.2);
+}
+
+.glass-btn {
+    background: linear-gradient(135deg, var(--primary), var(--accent));
+    color: white;
+    border: none;
+    padding: 1rem;
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-size: 0.875rem;
+}
+
+.glass-btn:hover {
+    filter: brightness(1.1);
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px -10px rgba(99, 102, 241, 0.5);
+}
+
+.text-gradient {
+    background: linear-gradient(to right, #818cf8, #c084fc);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
 }
 
 .app-container {
@@ -65,6 +129,8 @@ body {
     max-width: 1100px;
     position: relative;
     animation: fadeIn 0.5s ease-out;
+    background: transparent;
+    /* Ensure transparency */
 }
 
 @keyframes fadeIn {
@@ -512,19 +578,7 @@ select:focus {
     color: var(--primary);
 }
 
-.landing-hero {
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    text-align: center;
-    padding: 60px 2rem 60px 2rem;
-    /* Balanced padding, accounting for fixed/absolute elements */
-    background: radial-gradient(circle at top right, #f8fafc 0%, transparent 40%),
-        radial-gradient(circle at bottom left, #f1f5f9 0%, transparent 40%);
-    background-color: var(--bg-body);
-}
+
 
 #landing-date {
     font-size: 0.95rem;
@@ -699,12 +753,13 @@ select:focus {
     gap: 0.75rem;
     font-weight: 700;
     font-size: 1.25rem;
-    color: var(--text-main);
+    color: #000000 !important;
+    text-shadow: 0 0 2px rgba(255, 255, 255, 0.5);
 }
 
 .nav-logo i {
     font-size: 1.5rem;
-    color: var(--primary);
+    color: #000000 !important;
 }
 
 .landing-hero {
@@ -715,18 +770,14 @@ select:focus {
     align-items: center;
     text-align: center;
     padding: 60px 2rem 60px 2rem;
-    /* Balanced padding, accounting for fixed/absolute elements */
-    background: radial-gradient(circle at top right, #f8fafc 0%, transparent 40%),
-        radial-gradient(circle at bottom left, #f1f5f9 0%, transparent 40%);
-    background-color: var(--bg-body);
 }
 
 #landing-date {
     font-size: 0.95rem;
-    font-weight: 600;
-    color: var(--text-main);
+    font-weight: 700;
+    color: #000000 !important;
     text-transform: capitalize;
-    opacity: 0.8;
+    text-shadow: 0 0 2px rgba(255, 255, 255, 0.5);
 }
 
 .hero-content {
@@ -738,10 +789,22 @@ select:focus {
     font-size: 3.5rem;
     line-height: 1.2;
     margin-bottom: 1.5rem;
-    background: linear-gradient(135deg, var(--text-main) 0%, var(--primary) 100%);
+    /* Gradient Title for Glass Design */
+    background: linear-gradient(135deg, white 0%, var(--accent) 100%);
     background-clip: text;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
+    text-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* Specific override for the landing card to ensure it is glass */
+.hero-content.glass-card {
+    background: rgba(255, 255, 255, 0.1) !important;
+    /* Very sheer white */
+    backdrop-filter: blur(10px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37) !important;
+    border-radius: 1.5rem !important;
 }
 
 .hero-content .subtitle {
@@ -750,6 +813,10 @@ select:focus {
     max-width: 600px;
     margin-left: auto;
     margin-right: auto;
+    /* Pure Black as requested */
+    color: #000000;
+    font-weight: 600;
+    text-shadow: 0 1px 1px rgba(255, 255, 255, 0.5);
 }
 
 .hero-features {
@@ -765,17 +832,19 @@ select:focus {
     flex-direction: column;
     align-items: center;
     gap: 0.5rem;
-    color: var(--text-muted);
-    font-weight: 500;
+    color: #000000 !important;
+    font-weight: 700;
+    text-shadow: 0 0 2px rgba(255, 255, 255, 0.5);
 }
 
 .feature-item i {
     font-size: 2rem;
-    color: var(--primary);
+    color: #000000 !important;
     background: white;
     padding: 1rem;
     border-radius: 50%;
     box-shadow: var(--shadow-md);
+    border: 1px solid rgba(0, 0, 0, 0.1);
 }
 
 .landing-footer {
@@ -784,21 +853,25 @@ select:focus {
     width: 100%;
     display: flex;
     justify-content: space-between;
-    /* Spread content */
     align-items: center;
     padding: 1rem 2rem;
-    /* Compact vertical padding */
-    color: var(--text-muted);
+    color: #000000 !important;
     font-size: 0.9rem;
-    font-weight: 500;
+    font-weight: 700;
     z-index: 10;
-    backdrop-filter: blur(4px);
-    /* Subtle glass effect */
+    text-shadow: 0 0 2px rgba(255, 255, 255, 0.5);
+    background: transparent !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    box-shadow: none !important;
 }
 
 .landing-copyright {
-    font-size: 0.8rem;
-    opacity: 0.8;
+    font-size: 1.3rem;
+    /* Keep this large */
+    font-weight: 700;
+    opacity: 1;
+    color: #000000 !important;
 }
 
 /* Utilities */
@@ -815,7 +888,7 @@ select:focus {
 #landing-date {
     font-size: 0.9rem;
     font-weight: 500;
-    color: var(--text-muted);
+    color: var(--glass-text-muted);
     text-transform: capitalize;
 }
 
@@ -824,11 +897,14 @@ select:focus {
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
-    font-size: 0.9rem;
-    color: var(--text-muted);
-    font-weight: 500;
+    font-size: 1.1rem;
+    /* Revert to previous size */
+    color: #000000 !important;
+    font-weight: 700;
     min-width: 200px;
-    /* Prevent jumping */
+    background: transparent !important;
+    /* Force transparent background */
+    text-shadow: 0 0 2px rgba(255, 255, 255, 0.5);
 }
 
 .weather-content {
@@ -1168,11 +1244,11 @@ select:focus {
 }
 
 .resource-section h3 {
-    font-size: 1.1rem;
+    font-size: 1.25rem;
+    font-weight: 700;
     margin-bottom: 1.5rem;
-    color: var(--text-main);
-    font-weight: 600;
-    opacity: 0.9;
+    color: white;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 
@@ -1260,7 +1336,7 @@ select:focus {
 .contact-info-section h4 {
     font-size: 0.9rem;
     letter-spacing: 0.05em;
-    color: var(--text-muted);
+    color: #000000 !important;
     margin-bottom: 1rem;
     font-weight: 700;
 }
@@ -1271,23 +1347,27 @@ select:focus {
     justify-content: center;
     gap: 0.5rem;
     margin-bottom: 0.5rem;
-    color: var(--text-main);
+    color: #000000 !important;
     font-size: 0.95rem;
+    font-weight: 700;
 }
 
 .contact-item i {
-    color: var(--primary);
+    color: #000000 !important;
+    /* Light indigo for glass */
     font-size: 1.1rem;
 }
 
 .contact-item a {
-    color: var(--primary);
+    color: #000000 !important;
     text-decoration: none;
-    font-weight: 500;
+    font-weight: 700;
 }
 
 .contact-item a:hover {
     text-decoration: underline;
+    color: #000000 !important;
+    opacity: 0.8;
 }
 
 /* Mobile adjustments for Resource Grid */

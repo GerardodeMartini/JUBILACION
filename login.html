@@ -17,7 +17,7 @@
     <!-- Phosphor Icons -->
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
 
-    <link rel="stylesheet" href="/static/styles.css">
+    <link rel="stylesheet" href="/static/styles.css?v=40">
     <script type="module" src="/static/script.js?v=29"></script>
 
     <style>
@@ -26,7 +26,8 @@
             align-items: center;
             justify-content: center;
             min-height: 100vh;
-            background-color: var(--background);
+            /* Use global background from styles.css but ensure it's visible */
+            background-color: transparent;
         }
 
         .login-container {
@@ -39,76 +40,89 @@
 
 <body>
 
-    <section id="auth-section" class="card upload-card login-container">
-        <div class="logo-container" style="margin-bottom: 2rem; text-align: center;">
-            <i class="ph ph-identification-card logo-icon" style="font-size: 3rem; color: var(--primary);"></i>
-            <h1 style="font-size: 1.5rem; margin-top: 1rem;">Gestión de Jubilaciones</h1>
+    <section id="auth-section" class="glass-card login-container"
+        style="max-width: 420px; padding: 3rem; background: rgba(255, 255, 255, 0.1) !important; backdrop-filter: blur(10px) !important; border: 1px solid rgba(255, 255, 255, 0.2) !important; box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37) !important; border-radius: 1.5rem !important;">
+        <div class="logo-container" style="margin-bottom: 2.5rem; text-align: center; flex-direction: column;">
+            <div
+                style="background: rgba(255,255,255,0.1); padding: 1rem; border-radius: 50%; display: inline-flex; margin-bottom: 0.5rem; border: 1px solid #000000;">
+                <i class="ph ph-identification-card" style="font-size: 3rem; color: #000000;"></i>
+            </div>
+            <h1 class="text-gradient"
+                style="font-size: 1.75rem; margin-top: 0.5rem; font-weight: 800; color: #000000 !important; background: none; -webkit-text-fill-color: initial; text-shadow: 0 1px 1px rgba(255,255,255,0.5);">
+                Gestión de
+                Jubilaciones</h1>
+            <p style="color: #000000; font-size: 0.95rem; font-weight: 600;">Ingresa tus credenciales para continuar</p>
         </div>
 
         <div id="login-form-container">
-            <h2 style="margin-bottom: 1.5rem; text-align: center;">Iniciar Sesión</h2>
             <form onsubmit="handleLogin(event)">
                 <div class="form-group">
-                    <label for="login-username">Usuario</label>
-                    <input type="text" id="login-username" required autocomplete="username">
+                    <label for="login-username"
+                        style="color: #000000; margin-left: 0.25rem; font-weight: 700;">Usuario</label>
+                    <div style="position: relative;">
+                        <i class="ph ph-user"
+                            style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: #000000; font-size: 1.2rem;"></i>
+                        <input type="text" id="login-username" required autocomplete="username" class="glass-input"
+                            style="padding-left: 2.75rem; width: 100%; color: #000000 !important; font-weight: 600; border: 1px solid rgba(0,0,0,0.2) !important;"
+                            placeholder="Tu usuario">
+                    </div>
                 </div>
                 <div class="form-group">
-                    <label for="login-password">Contraseña</label>
+                    <label for="login-password"
+                        style="color: #000000; margin-left: 0.25rem; font-weight: 700;">Contraseña</label>
                     <div style="position: relative;">
+                        <i class="ph ph-lock-key"
+                            style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: #000000; font-size: 1.2rem;"></i>
                         <input type="password" id="login-password" required autocomplete="current-password"
-                            style="width: 100%; padding-right: 40px;">
-                        <!-- Wrapper for click - persistent -->
+                            class="glass-input"
+                            style="width: 100%; padding-left: 2.75rem; padding-right: 40px; color: #000000 !important; font-weight: 600; border: 1px solid rgba(0,0,0,0.2) !important;"
+                            placeholder="••••••••">
+
                         <div id="password-toggle-btn"
-                            style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); cursor: pointer; color: var(--text-muted); font-size: 1.2rem; z-index: 100;">
+                            style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #000000; font-size: 1.2rem; z-index: 100;">
                             <span id="icon-show" style="display: block;"><i class="ph ph-eye"></i></span>
                             <span id="icon-hide" style="display: none;"><i class="ph ph-eye-slash"></i></span>
                         </div>
                     </div>
                 </div>
-                <button type="submit" class="btn-primary" style="width: 100%;">Ingresar</button>
+                <button type="submit" class="glass-btn" style="width: 100%; margin-top: 1rem;">
+                    Iniciar Sesión <i class="ph ph-arrow-right" style="margin-left: 0.5rem;"></i>
+                </button>
             </form>
 
             <script>
                 document.addEventListener('DOMContentLoaded', function () {
-                    console.log('Login page script loaded');
                     const toggleBtn = document.getElementById('password-toggle-btn');
                     const passwordInput = document.getElementById('login-password');
                     const iconShow = document.getElementById('icon-show');
                     const iconHide = document.getElementById('icon-hide');
 
                     if (toggleBtn) {
-                        console.log('Toggle button found');
                         toggleBtn.addEventListener('click', function (e) {
-                            console.log('Toggle button clicked');
-                            // Prevent any form submission or parent click stealing
                             e.preventDefault();
                             e.stopPropagation();
-
                             if (passwordInput.type === 'password') {
-                                // Switch to text
                                 passwordInput.type = 'text';
                                 iconShow.style.display = 'none';
                                 iconHide.style.display = 'block';
                             } else {
-                                // Switch to password
                                 passwordInput.type = 'password';
                                 iconShow.style.display = 'block';
                                 iconHide.style.display = 'none';
                             }
                         });
-                    } else {
-                        console.error('Toggle button NOT found');
                     }
                 });
             </script>
             <div
-                style="margin-top: 1.5rem; display: flex; flex-direction: column; gap: 1rem; align-items: center; width: 100%;">
-                <p style="font-size: 0.9rem; color: var(--text-muted);">
+                style="margin-top: 2rem; display: flex; flex-direction: column; gap: 1rem; align-items: center; width: 100%;">
+                <p style="font-size: 0.9rem; color: var(--glass-text-muted);">
                     ¿No tienes cuenta? <a href="registro.html"
-                        style="color: var(--primary); font-weight: 600; text-decoration: none;">Regístrate aquí</a>
+                        style="color: #a5b4fc; font-weight: 600; text-decoration: none; border-bottom: 1px dashed #a5b4fc;">Registrate
+                        aquí</a>
                 </p>
-                <a href="inicio.html" class="btn-secondary"
-                    style="width: 100%; justify-content: center; text-decoration: none; display: flex; gap: 0.5rem;">
+                <a href="inicio.html"
+                    style="color: #000000; text-decoration: none; display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; font-weight: 600; margin-top: 1rem;">
                     <i class="ph ph-arrow-left"></i> Volver al Inicio
                 </a>
             </div>

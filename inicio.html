@@ -20,8 +20,35 @@
     <!-- SheetJS (xlsx) -->
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 
-    <link rel="stylesheet" href="/static/styles.css">
+    <link rel="stylesheet" href="/static/styles.css?v=40">
     <script type="module" src="/static/script.js?v=29"></script>
+    <style>
+        /* FORCED INLINE STYLES TO BYPASS CACHE */
+        /* Force parent containers to be transparent so only the card has background */
+        .landing-hero,
+        .app-container {
+            background: transparent !important;
+            background-color: transparent !important;
+        }
+
+        /* Match Login Page Glass Style Exactly */
+        .hero-content.glass-card {
+            background: rgba(255, 255, 255, 0.1) !important;
+            /* Standard Glass Opacity */
+            backdrop-filter: blur(12px) !important;
+            -webkit-backdrop-filter: blur(12px) !important;
+            border: 1px solid rgba(255, 255, 255, 0.2) !important;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37) !important;
+            border-radius: 1.5rem !important;
+            padding: 3rem !important;
+        }
+
+        .app-container {
+            background: transparent !important;
+            box-shadow: none !important;
+            border: none !important;
+        }
+    </style>
 </head>
 
 <body>
@@ -44,7 +71,7 @@
 
         <!-- Landing Hero -->
         <header id="landing-hero" class="landing-hero">
-            <div class="hero-content">
+            <div class="hero-content glass-card" style="padding: 3rem; width: 100%;">
                 <h1>Bienvenido a PILIN</h1>
                 <p class="subtitle">
                     Esta plataforma ha sido diseñada para ayudarte en tu gestión jubilatoria. Aquí podrás encontrar
@@ -137,7 +164,8 @@
                 <!-- Weather info will appear here -->
                 <span class="loading-weather">Cargando clima...</span>
             </div>
-            <div class="landing-copyright">
+            <div class="landing-copyright"
+                style="font-size: 1.1rem !important; font-weight: 700; opacity: 1; color: #000000 !important;">
                 &copy; 2025 Gestión de Jubilaciones. Powered by <b>PILIN</b>.
             </div>
         </footer>
@@ -217,10 +245,10 @@
                         if (weather.weathercode >= 95) icon = "cloud-lightning";
 
                         widget.innerHTML = `
-                    <div class="weather-content fade-in">
-                        <i class="ph ph-${icon}"></i>
-                        <span class="weather-city">${city.name}</span>
-                        <span class="weather-temp">${weather.temperature}°C</span>
+                    <div class="weather-content fade-in" style="background: transparent !important; box-shadow: none !important; border: none !important;">
+                        <i class="ph ph-${icon}" style="color: #000000 !important; font-size: 1.6rem;"></i>
+                        <span class="weather-city" style="color: #000000 !important; font-weight: 800; font-size: 1.2rem;">${city.name}</span>
+                        <span class="weather-temp" style="color: #000000 !important; font-weight: 800; font-size: 1.2rem;">${weather.temperature}°C</span>
                     </div>
                 `;
                     }
